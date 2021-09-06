@@ -1,0 +1,15 @@
+{
+"BIND_TO":"192.168.10.1:7777,127.0.0.1:7777,u127.0.0.1:7777,h127.0.0.1:7778,h192.168.10.200:7778,192.168.0.19:7777",
+"FORCE_START":true,
+"DEBUG":false,
+"VERBOSE":false,
+"RUN_SERVICES":"*",
+
+"NETWORK_ID":70,
+"CRYPTO_SALT":"32097890fnfssdFSDFIOSUfsd89f$#(&SDFJSFDSgdgfd987$#SDF",
+"SECRET":"fghgdf87/fsdivcx9784732j",
+"DB_SERVICE":"http://192.168.10.200/adserver2/adserve/export-db2/",
+
+"SOL_NODE_PRIV":"http://162.55.91.243:8899",
+"SOL_NODE_PUB":"https://api.mainnet-beta.solana.com"
+}

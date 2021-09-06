@@ -1,0 +1,467 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang="en">
+<head>
+    <title>Server Status</title>
+	<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+</head>
+<body>
+
+<style>
+*
+{
+	font-family: arial;
+}
+body
+{
+	font-size: 12px;
+	min-width: 800px;
+}
+
+h1, h2, h3
+{
+	font-size: 18px;
+	color: #AAAAFF;
+}
+h2
+{
+	font-size: 16px;
+}
+h3
+{
+	font-size: 15px;
+}
+pre 
+{
+	margin: 0px;
+	font-family: monospace;
+}
+
+.container
+{
+	border-radius: 0px 0px 10px 10px;
+	-moz-border-radius: 0px 0px 10px 10px;
+	-webkit-border-radius: 0px 0px 10px 10px;
+	border: 3px solid #BBBBBB;
+	margin-bottom: 15px;
+}
+
+h1
+{
+	-webkit-box-shadow: inset 0px -15px 6px -10px rgba(0,0,0,0.24);
+	-moz-box-shadow: inset 0px -15px 6px -10px rgba(0,0,0,0.24);
+	box-shadow: inset 0px -15px 6px -10px rgba(0,0,0,0.24);
+	background: #AAAAAA;
+	padding: 5px 5px;
+	padding-bottom: 10px;
+	margin: 0px;
+	
+	color: white;
+}
+
+h1 i
+{
+	display: block;
+	color: #DDDDDD;
+	font-size: 10px;
+}
+
+table.main
+{
+	color: #666666;
+	margin: auto;
+}
+
+table.main thead
+{
+	color: #333333;
+}
+
+table.main tr td:nth-child(odd)
+{
+	border-left: 7px solid white;
+	
+	color: #AAAAAA!important;
+	background: #EEEEEE;
+}
+
+table.main tr td:nth-child(even)
+{
+	background: #e1ffff; /* Old browsers */
+	background: -moz-linear-gradient(top, #e1ffff 0%, #e1ffff 7%, #e1ffff 12%, #fdffff 12%, #e6f8fd 30%, #c8eefb 54%, #bee4f8 75%, #b1d8f5 100%); /* FF3.6+ */
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#e1ffff), color-stop(7%,#e1ffff), color-stop(12%,#e1ffff), color-stop(12%,#fdffff), color-stop(30%,#e6f8fd), color-stop(54%,#c8eefb), color-stop(75%,#bee4f8), color-stop(100%,#b1d8f5)); /* Chrome,Safari4+ */
+	background: -webkit-linear-gradient(top, #e1ffff 0%,#e1ffff 7%,#e1ffff 12%,#fdffff 12%,#e6f8fd 30%,#c8eefb 54%,#bee4f8 75%,#b1d8f5 100%); /* Chrome10+,Safari5.1+ */
+	background: -o-linear-gradient(top, #e1ffff 0%,#e1ffff 7%,#e1ffff 12%,#fdffff 12%,#e6f8fd 30%,#c8eefb 54%,#bee4f8 75%,#b1d8f5 100%); /* Opera 11.10+ */
+	background: -ms-linear-gradient(top, #e1ffff 0%,#e1ffff 7%,#e1ffff 12%,#fdffff 12%,#e6f8fd 30%,#c8eefb 54%,#bee4f8 75%,#b1d8f5 100%); /* IE10+ */
+	background: linear-gradient(to bottom, #e1ffff 0%,#e1ffff 7%,#e1ffff 12%,#fdffff 12%,#e6f8fd 30%,#c8eefb 54%,#bee4f8 75%,#b1d8f5 100%); /* W3C */
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#e1ffff', endColorstr='#b1d8f5',GradientType=0 ); /* IE6-9 */
+}
+
+table.main tr td
+{
+	padding: 5px;
+	min-width: 40px;
+}
+
+.clear
+{
+	height: 1px;
+	overflow: hidden;
+	float: none;
+	clear: both;
+}
+
+.threads
+{
+	font-size: 14px;
+	font-family: monospace;
+	padding: 10px;
+}
+
+
+.tab
+{
+	color: #666666;
+}
+
+.tab tr
+{
+	color: #777777;
+	background: #EEEEEE;
+}
+
+.tab thead tr
+{
+	font-weight: bold;
+}
+
+.tab tr td
+{
+	padding: 5px;
+}
+
+.thread_list
+{
+    padding-top: 5px;
+	padding-left: 10px;
+}
+
+.thread_list span:nth-child(1)
+{ 
+    color: #888888;
+}
+.thread_list span:nth-child(2)
+{
+	font-weight: bold;
+}
+
+.tooltip
+{
+	cursor: default;
+	position: relative;
+}
+
+.tooltip div
+{
+	display: none;
+	color: black;
+}
+
+.tooltip.sel
+{
+	background: black;
+	color: white;
+}
+
+.tooltip:hover div, .tooltip.sel div
+{
+	display: block;
+	position: absolute;
+	background: white;
+	opacity: 0.9;
+	
+	padding: 10px;
+	border: 2px solid #DDDDDD;
+	
+	left: 20px;
+	z-index: 900
+}
+
+td img, td
+{
+	vertical-align: middle!important;
+}
+
+td img
+{
+	opacity: 0.7;
+	cursor: pointer;
+	float: right;
+}
+
+td img:hover
+{
+	opacity: 1;
+}
+
+.dnone
+{
+	display: none;
+}
+
+.act
+{
+	-webkit-transform: rotate(180deg);
+    -moz-transform: rotate(180deg);
+    -o-transform: rotate(180deg);
+    -ms-transform: rotate(180deg);
+    transform: rotate(180deg);
+}
+	
+table.compressing
+{
+	font-size: 12px;
+	padding: 10px;
+}
+table.compressing tr:nth-child(even)
+{
+	font-size: 11px;
+}
+table.compressing .running
+{
+	background: #EEFFEE!important;
+}
+
+</style>
+
+<div class='container'>
+<h1>Server Status<i>##_version##, Listening on: ##_bound_to##</i></h1>
+	<table class='main' style='float: right;'>
+		<thead>
+			<tr>
+				<td colspan='4'>Server Uptime: ##uptime##</td>
+			</tr>
+		</thead>
+
+		<tbody>
+			<tr>
+				<td>Connections made</td><td>##_connections##</td>
+			</tr>
+			<tr>
+				<td>Requests</td><td>##_requests##</td>
+				<td>Errors</td><td>##_errors##</td>
+			</tr>
+			<tr>
+				<td>Avg. Req. Time</td><td>##_req_time##</td>
+				<td>Avg. Roundtrip</td><td>##_req_time_full##</td>
+			</tr>
+			<tr>
+				<td>Bytes Sent</td><td>##_bytes_sent##</td>
+				<td>S-Compression</td><td>##_compression##</td>
+			</tr>
+			<tr>
+				<td>Bytes Received</td><td>##_bytes_received##</td>
+				<td>R-Compression</td><td>##_receive_compression##</td>
+			</tr>
+		</tbody>
+			
+		<thead>
+			<tr>
+				<td colspan='4'>Last 5 seconds</td>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td>Connections made/s</td><td>##_connections_5s##</td>
+			</tr>
+			<tr>
+				<td>Requests/s</td><td>##_requests_5s##</td>
+				<td>Errors/s</td><td>##_errors_5s##</td>
+			</tr>
+			<tr>
+				<td>Avg. Req. Time</td><td>##_req_time_5s##</td>
+				<td>Avg. Roundtrip</td><td>##_req_time_full_5s##</td>
+			</tr>
+			<tr>
+				<td>Sent/s</td><td>##_bytes_sent_5s##</td>
+				<td>S-Compression</td><td>##_compression_5s##</td>
+			</tr>
+			<tr>
+				<td>Received/s</td><td>##_bytes_received_5s##</td>
+				<td>R-Compression</td><td>##_receive_compression_5s##</td>
+			</tr>
+		</tbody>
+		
+		
+		<thead>
+			<tr>
+				<td id='tabletoggletd' colspan='4'>Averages (per second) <img id='tabletoggle' alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAcxJREFUeNqkU01LW0EUPZP3kac0ghg3gkgsgtBif4KIezeuBHcqRKhUkBQqdOEmFmIXXXQhCN10J4GA4A9w50IkgguJGtSWEpss8jWvL8nL895JJyBdxOLAeTP3zj3nzp07TwRBgOcMczlZhBBinpAiO/YETp6SJgjpvc0oTM/7w85UYnE4NjUR7sk+y3mx1PffnCytTlCr1XiOvX45glar1VPg1bgJ4nRPalYqZbXwff9JAoZhQHOUQLVa6Qo0m83uBq/rdQkpJRqNBu13xCORCDRHCXAQj3a7rUTWkln8vHfxZWMUukPvdm4RHTTxcYnLbENzeIQ8rwkGB7uuhw8rk7j7VUc8eQXTtLG6fY0fBRdbb98oWwgDmqMEgiAEhpQeKTdgwcPB12kUSj7m1s/VzDb7LcuhO7ChOUrAMNjpUM0BBdiw7TD6LB+HuzPKzzPb7GfwKTRH3YFtv+gohSwSMLq1WYST/Vm6cZdWzqNOaI4ScJyBv+0JU32Pn7WUAWV0/mml5qjEl0dxduRPL1oUbPVENuereOapE5QLx0OlfGbn07eF9xD1sZ4vKfBvivnMZ+aRVRL06ef3wVX8x0/oE6rUeime+zs/CDAA4pvUMT+4VjEAAAAASUVORK5CYII="></td>
+			</tr>
+		</thead>
+		<tbody id='tabletoggle_dest' class='dnone'>
+			<tr>
+				<td>Connections made</td><td>##_connections_s##</td>
+			</tr>
+			<tr>
+				<td>Requests</td><td>##_requests_s##</td>
+				<td>Errors</td><td>##_errors_s##</td>
+			</tr>
+			<tr>
+				<td>Sent</td><td>##_bytes_sent_s##</td>
+			</tr>
+			<tr>
+				<td>Received</td><td>##_bytes_received_s##</td>
+			</tr>
+		</tbody>
+		
+	</table>
+
+	<div class='threads'>
+		Threads: ##_threads_states##<br>
+		
+		O - Opening new connection<br>
+		
+		&nbsp;S - Serving<br>
+		&nbsp;W - Writing Response<br>
+		
+		&nbsp;&nbsp;K - Keepalive<br>
+		&nbsp;&nbsp;X - Closing Connection<br>
+		
+	</div>
+	<div class='clear'>&nbsp;</div>
+</div>
+
+<div class='container'>
+	<h1>Handlers<i>Installed handlers & handler status</i></h1>
+
+	##handlers_table##
+</div>
+
+<div class='container'>
+	<h1>Thread Details<i>Threads status</i></h1>
+	 
+	##threadlist##
+	 
+	<div class='threads'>
+		Threads:<br>
+		
+		O - Opening new connection<br>
+		
+		&nbsp;Sr - Message was read<br>
+		&nbsp;Ss1 - Parameters processed<br>
+		&nbsp;W - Writing Response<br>
+		
+		&nbsp;&nbsp;K - Keepalive<br>
+		&nbsp;&nbsp;X - Closing Connection<br>		
+	</div>
+	<div class='clear'>&nbsp;</div>
+</div>
+
+<div class='container'>
+	<h1>HTTP Plugin<i>HTTP protocol support</i></h1>
+	
+	<div class='threads'>
+		Important: HTTP protocol is supported, but all stats are not counted towards global data and it's adviced to use sockets as this method has lower overhead<br>
+		Threads:
+	</div>
+	##http_threadlist##
+	
+	<div class='threads'>
+		R - Running, thread is generating response<br>
+		W - Writing data to network<br>
+		F - Finished<br>	
+	</div>
+	<div class='clear'>&nbsp;</div>
+</div>
+
+<div class='container'>
+	<h1>UDP Plugin<i>UDP protocol support</i></h1>
+	
+	<div class='threads'>
+		Important: UDP protocol is supported, but all stats are not counted towards global data. Reuqests made using UDP are not quaranteed to be processed<br>
+		Threads:
+	</div>
+	##udp_threadlist##
+	
+	<div class='threads'>
+		O - Reading Packet<br>
+		P - Processing request<br>
+		F - Finished<br>	
+		X - Error<br>	
+	</div>
+	<div class='clear'>&nbsp;</div>
+</div>
+
+
+##status_additional##
+
+<script>
+
+var els = document.getElementsByTagName('span');
+for (var i=0; i<els.length; i++) {
+	
+	if (els[i].className.indexOf("tooltip") <= -1) {
+		continue;
+	}
+	var el = els[i];
+		
+	function _cls(el, originalClass) {
+		el.onclick = function() {
+			if (el.className == originalClass)
+				el.className += " sel";
+			else
+				el.className = originalClass;
+		}
+	}; _cls(el, el.className);
+	
+	var childs = el.childNodes;
+	for (var ii=0; ii<childs.length; ii++)
+	{
+		childs[ii].onclick = function(e) {
+			if (!e)
+				e = window.event;
+			e.cancelBubble = true;
+			if (e.stopPropagation)
+				e.stopPropagation();
+			return false;
+		};
+	}
+}
+
+
+var tt = document.getElementById('tabletoggle');
+var tttd = document.getElementById('tabletoggletd');
+
+tt.onclick = function(e) {
+
+	ttdst = document.getElementById('tabletoggle_dest');
+	ttdst.className = ttdst.className == '' ? 'dnone' : '' ;
+	
+	tt.className = ttdst.className == '' ? 'act' : '';
+	
+	if (!e) var e = window.event;
+		e.cancelBubble = true;
+	if (e.stopPropagation) e.stopPropagation();	
+	return false;
+}
+
+tttd.onclick = tt.onclick;
+</script>
+
+
+<style>
+.sol thead td:nth-child(6) {color: #777711; background: #ffffaa}
+
+.sol thead td:nth-child(7) {color: #771111; background: #ffaaaa}
+.sol tbody td:nth-child(7) {color: #771111}
+
+.sol thead td:nth-child(8) {color: #771111; background: #ffaaaa}
+.sol tbody td:nth-child(8) {color: #771111}
+
+.sol thead td:nth-child(9) {color: #771111; background: #ffaaaa}
+.sol tbody td:nth-child(9) {color: #771111}
+
+.sol thead td:nth-child(10) {color: #771111; background: #ffaaaa}
+.sol tbody td:nth-child(10) {color: #771111}
+
+</body>
+</html>

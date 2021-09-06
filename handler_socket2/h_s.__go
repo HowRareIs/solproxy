@@ -1,0 +1,945 @@
+package handler_socket2
+
+import (
+	"bytes"
+	"compress/flate"
+	"crypto/sha1"
+	"encoding/binary"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net"
+	"os"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+)
+
+const version = "HSServer v1.1a"
+const compression_enable = true
+const compression_threshold = 1024 * 20 //450
+
+type stats struct {
+	requests      uint64
+	req_time      uint64
+	req_time_full uint64
+
+	bytes_received         uint64
+	bytes_rec_uncompressed uint64
+	bytes_generated        uint64
+	bytes_sent             uint64
+}
+
+type connection struct {
+	ip         string
+	status     string
+	action     string
+	data       string
+	comment    string
+	is_error   bool
+	start_time int64
+	end_time   int64
+}
+
+var status_connections map[uint64]*connection = make(map[uint64]*connection)
+var stats_actions map[string]*stats = make(map[string]*stats)
+
+var connections uint64 = 0
+var requests uint64 = 0
+var errors uint64 = 0
+var req_time uint64 = 0
+var req_time_full uint64 = 0 // time of whole request (including received + sent)
+
+var stats_mutex sync.Mutex
+
+var uptime_started int
+
+type uh_struct struct {
+	timestamp int
+
+	connections   int
+	requests      int
+	errors        int
+	req_time      int
+	req_time_full int
+
+	b_generated        int
+	b_sent             int
+	b_received         int
+	b_rec_uncompressed int
+}
+
+var uptime_history [6]uh_struct
+
+func init() {
+	uptime_started = int(time.Now().UnixNano()/1000000000) - 1 // so we won't divide by 0
+}
+
+func uh_add(connections, requests, errors, req_time, req_time_full, b_generated, b_sent, b_received, b_rec_uncompressed int) {
+
+	now := int(time.Now().UnixNano() / 1000000000)
+
+	stats_mutex.Lock()
+
+	uh_now := &uptime_history[now%6]
+	if uh_now.timestamp != now {
+		uh_now.timestamp = now
+		uh_now.connections = connections
+		uh_now.requests = requests
+		uh_now.errors = errors
+		uh_now.req_time = req_time
+		uh_now.req_time_full = req_time_full
+
+		uh_now.b_generated = b_generated
+		uh_now.b_sent = b_sent
+		uh_now.b_received = b_received
+		uh_now.b_rec_uncompressed = b_rec_uncompressed
+
+	} else {
+		uh_now.connections += connections
+		uh_now.requests += requests
+		uh_now.errors += errors
+		uh_now.req_time += req_time
+		uh_now.req_time_full += req_time_full
+
+		uh_now.b_generated += b_generated
+		uh_now.b_sent += b_sent
+		uh_now.b_received += b_received
+		uh_now.b_rec_uncompressed += b_rec_uncompressed
+	}
+
+	stats_mutex.Unlock()
+}
+
+func uh_get() uh_struct {
+
+	ret := uh_struct{}
+	now := int(time.Now().UnixNano() / 1000000000)
+
+	stats_mutex.Lock()
+	for i := 0; i < 6; i++ {
+
+		// current second - we're still collecting stats
+		if i == 0 {
+			continue
+		}
+
+		now--
+		uh_now := &uptime_history[now%6]
+		if uh_now.timestamp != now {
+			uh_now.timestamp = now
+			uh_now.connections = 0
+			uh_now.requests = 0
+			uh_now.errors = 0
+			uh_now.req_time = 0
+			uh_now.req_time_full = 0
+
+			uh_now.b_generated = 0
+			uh_now.b_sent = 0
+			uh_now.b_received = 0
+			uh_now.b_rec_uncompressed = 0
+			continue
+		}
+
+		ret.connections += uh_now.connections
+		ret.requests += uh_now.requests
+		ret.errors += uh_now.errors
+		ret.req_time += uh_now.req_time
+		ret.req_time_full += uh_now.req_time_full
+
+		ret.b_generated += uh_now.b_generated
+		ret.b_sent += uh_now.b_sent
+		ret.b_received += uh_now.b_received
+		ret.b_rec_uncompressed += uh_now.b_rec_uncompressed
+	}
+	stats_mutex.Unlock()
+
+	return ret
+}
+
+func GetStatus() map[string]string {
+
+	// General info
+	_connections := atomic.LoadUint64(&connections)
+	_errors := atomic.LoadUint64(&errors)
+
+	stats_mutex.Lock()
+	_requests := requests
+	_req_time := req_time
+	_req_time_full := req_time_full
+	stats_mutex.Unlock()
+
+	ret := map[string]string{}
+	ret["_connections"] = fmt.Sprintf("%d", _connections)
+	ret["_requests"] = fmt.Sprintf("%d", _requests)
+	ret["_errors"] = fmt.Sprintf("%d", _errors)
+	if _requests > 0 {
+		ret["_req_time"] = fmt.Sprintf("%.3fms", float64(_req_time/_requests)/float64(1000))
+		ret["_req_time_full"] = fmt.Sprintf("%.3fms", float64(_req_time_full/_requests)/float64(1000))
+	} else {
+		ret["_req_time"] = "-"
+		ret["_req_time_full"] = "-"
+	}
+	// <<
+
+	// Handler Status
+	var _bytes_sent uint64 = 0
+	var _bytes_generated uint64 = 0
+	var _bytes_received uint64 = 0
+	var _bytes_rec_uncompressed uint64 = 0
+
+	table_handlers := NewTableGen("Handler", "Calls", "AVG Req Time", "AVG Roundtrip", "Send", "S-Compression", "Received", "R-Compression")
+	table_handlers.SetClass("tab")
+
+	handlers_added := make(map[string]bool)
+
+	stats_mutex.Lock()
+	for action_type, action_data := range stats_actions {
+
+		_bytes_sent += action_data.bytes_sent
+		_bytes_generated += action_data.bytes_generated
+		_bytes_received += action_data.bytes_received
+		_bytes_rec_uncompressed += action_data.bytes_rec_uncompressed
+
+		_r_compr := ((action_data.bytes_rec_uncompressed + 1) * 1000) / (action_data.bytes_received + 1)
+		_s_compr := ((action_data.bytes_generated + 1) * 1000) / (action_data.bytes_sent + 1)
+		_rt := float64(action_data.req_time/action_data.requests) / 1000
+		_rtf := float64(action_data.req_time_full/action_data.requests) / 1000
+
+		table_handlers.AddRow(action_type, strconv.Itoa(int(action_data.requests)),
+			fmt.Sprintf("%.3fms", _rt), fmt.Sprintf("%.3fms", _rtf),
+			formatBytes(action_data.bytes_sent), fmt.Sprintf("%.1f%%", float64(_s_compr)/10),
+			formatBytes(action_data.bytes_received), fmt.Sprintf("%.1f%%", float64(_r_compr)/10))
+
+		handlers_added[action_type] = true
+	}
+	stats_mutex.Unlock()
+
+	for _, v := range action_handlers {
+		for _, vv := range v.GetActions() {
+			if handlers_added[vv] {
+				continue
+			}
+			table_handlers.AddRow(vv, "-", "-", "-", "-", "-", "-", "-")
+		}
+	}
+	if handlers_added["server-status"] != true {
+		table_handlers.AddRow("server-status", "-", "-", "-", "-", "-", "-", "-")
+	}
+
+	ret["handlers_table"] = table_handlers.RenderSorted(0)
+	// <<
+
+	// General info, additional
+	_r_compr := ((_bytes_rec_uncompressed + 1) * 1000) / (_bytes_received + 1)
+	_s_compr := ((_bytes_generated + 1) * 1000) / (_bytes_sent + 1)
+	ret["_bytes_sent"] = formatBytes(_bytes_sent)
+	ret["_bytes_received"] = formatBytes(_bytes_received)
+	ret["_compression"] = fmt.Sprintf("%.1f%%", float64(_s_compr)/10)
+	ret["_receive_compression"] = fmt.Sprintf("%.1f%%", float64(_r_compr)/10)
+	// <<
+
+	//	Thread states
+	_threads_states := ""
+	stats_mutex.Lock()
+	for _, conn_data := range status_connections {
+		_threads_states += conn_data.status[0:1] + " "
+	}
+	stats_mutex.Unlock()
+	ret["_threads_states"] = _threads_states
+	// <<
+
+	// Connections
+	now := time.Now().UnixNano()
+	status_items := make([]ScoredItems, len(status_connections))
+	i := 0
+
+	stats_mutex.Lock()
+	for conn_id, conn_data := range status_connections {
+
+		var took float64 = -1
+		var took_str = ""
+		if conn_data.start_time != 0 {
+
+			if conn_data.end_time == 0 {
+				took = float64(now-conn_data.start_time) / float64(1000000)
+			} else {
+				took = float64(conn_data.end_time-conn_data.start_time) / float64(1000000)
+			}
+
+			took_str = fmt.Sprintf("%.3fms", took)
+		} else {
+			took_str = "??"
+		}
+
+		_conn_data := conn_data.data
+		if len(_conn_data) > 60 {
+
+			_pos := 0
+			_conn_data_wbr := ""
+			for _pos < len(_conn_data) {
+				_end := _pos + 80
+				if _end > len(_conn_data) {
+					_end = len(_conn_data)
+				}
+				_conn_data_wbr += _conn_data[_pos:_end] + "<wbr>"
+				_pos += 80
+			}
+
+			_conn_data = "<span class='tooltip'>[...] " + _conn_data[0:60] + "<div>" + _conn_data_wbr + "</div></span>"
+		} else {
+			_conn_data = "<span>" + _conn_data + "</span>"
+		}
+		_tmp := fmt.Sprintf("<span>#%d</span> - <span>[%s]</span> <span>%s</span> - <span>%s</span> %s <span>%s</span>",
+			conn_id, conn_data.status, took_str,
+			conn_data.action, _conn_data, conn_data.comment)
+		_tmp = "<div class='thread_list'>" + _tmp + "</div>"
+
+		status_items[i].item = _tmp
+		status_items[i].score = int64(conn_id)
+		i++
+	}
+	stats_mutex.Unlock()
+
+	sort.Sort(SIArr(status_items))
+
+	threadlist := ""
+	for _, v := range status_items {
+		threadlist += v.item
+	}
+	ret["threadlist"] = threadlist
+	// <<
+
+	ret["_version"] = version
+	ret["_bound_to"] = strings.Join(boundTo, ", ")
+
+	memcache_status := " - Not available - "
+	if num, ok := actionToHandlerNum["memcache-status"]; ok {
+		memcache_status = action_handlers[num].HandleAction("", HSParams{})
+	}
+	ret["memcache_status"] = memcache_status
+
+	// get HTTP status
+	httpStatMutex.Lock()
+	now = time.Now().UnixNano()
+	scored_items := make([]ScoredItems, len(httpRequestStatus))
+	i = 0
+	for k, rs := range httpRequestStatus {
+
+		took_str := "??"
+		took := float64(0)
+		if rs.start_time != 0 {
+			if rs.end_time == 0 {
+				took = float64(now-rs.start_time) / float64(1000000)
+			} else {
+				took = float64(rs.end_time-rs.start_time) / float64(1000000)
+			}
+			took_str = fmt.Sprintf("%.3fms", took)
+		}
+
+		tmp := fmt.Sprintf("<div class='thread_list'><span>Num. %d</span> - <span>[%s]</span> <span>%s</span> <span>%s</span></div>", k, rs.status, took_str, rs.req)
+
+		scored_items[i] = ScoredItems{tmp, int64(k)}
+		i++
+	}
+
+	httpStatMutex.Unlock()
+
+	sort.Sort(SIArr(scored_items))
+	tmp := ""
+	for _, v := range scored_items {
+		tmp += v.item
+	}
+	ret["http_threadlist"] = tmp
+
+	// <<
+
+	ret["udp_threadlist"] = GetStatusUDP()
+
+	// calculate uptime
+	uptime_str := ""
+	ranges := []string{"day", "hour", "minute", "second"}
+	div := []int{60 * 60 * 24, 60 * 60, 60, 1}
+
+	uptime := int(time.Now().UnixNano()/1000000000) - uptime_started
+	for i := 0; i < 4; i++ {
+
+		u_ := uptime / div[i]
+		s_ := ""
+		if u_ > 1 {
+			s_ = "s"
+		}
+
+		if u_ > 0 {
+			uptime_str += fmt.Sprintf("%d %s%s ", u_, ranges[i], s_)
+			uptime = uptime % div[i]
+		}
+	}
+	ret["uptime"] = uptime_str
+	// <<
+
+	// per second averages
+	uptime = int(time.Now().UnixNano()/1000000000) - uptime_started
+
+	ret["_requests_s"] = fmt.Sprintf("%.2f", float64(_requests)/float64(uptime))
+	ret["_connections_s"] = fmt.Sprintf("%.2f", float64(_connections)/float64(uptime))
+	ret["_errors_s"] = fmt.Sprintf("%.2f", float64(_errors)/float64(uptime))
+
+	_bytes_sent = _bytes_sent / uint64(uptime)
+	_bytes_received = _bytes_received / uint64(uptime)
+	ret["_bytes_sent_s"] = formatBytes(_bytes_sent)
+	ret["_bytes_received_s"] = formatBytes(_bytes_received)
+
+	// <<
+
+	// last 5 seconds stats
+	last5 := uh_get()
+
+	ret["_requests_5s"] = fmt.Sprintf("%.2f", float64(last5.requests)/5)
+	ret["_connections_5s"] = fmt.Sprintf("%.2f", float64(last5.connections)/5)
+	ret["_errors_5s"] = fmt.Sprintf("%.2f", float64(last5.errors)/5)
+
+	ret["_req_time_5s"] = fmt.Sprintf("%.3fms", float64(last5.req_time/(last5.requests+1))/float64(1000))
+	ret["_req_time_full_5s"] = fmt.Sprintf("%.3fms", float64(last5.req_time_full/(last5.requests+1))/float64(1000))
+
+	_bytes_sent = uint64(last5.b_sent / 5)
+	_bytes_received = uint64(last5.b_received / 5)
+	ret["_bytes_sent_5s"] = formatBytes(_bytes_sent)
+	ret["_bytes_received_5s"] = formatBytes(_bytes_received)
+
+	_s_compr = uint64(((last5.b_generated + 1) * 1000) / (last5.b_sent + 1))
+	_r_compr = uint64(((last5.b_rec_uncompressed + 1) * 1000) / (last5.b_received + 1))
+	ret["_compression_5s"] = fmt.Sprintf("%.1f%%", float64(_s_compr)/10)
+	ret["_receive_compression_5s"] = fmt.Sprintf("%.1f%%", float64(_r_compr)/10)
+	// <<
+
+	return ret
+}
+
+func closeConnectionReport(conn_id uint64, comment string, is_error bool) {
+
+	x := func(conn_id uint64, comment string, is_error bool) {
+
+		if is_error {
+			fmt.Print("Error: " + comment)
+		} else {
+			fmt.Print("Info: " + comment)
+		}
+
+		time.Sleep(5000 * time.Millisecond)
+		stats_mutex.Lock()
+		var c *connection = status_connections[conn_id]
+		if c.end_time == 0 {
+			c.start_time = 0
+		}
+		c.status = "X"
+		c.comment = comment
+		c.is_error = is_error
+		stats_mutex.Unlock()
+
+		time.Sleep(5000 * time.Millisecond)
+		stats_mutex.Lock()
+		delete(status_connections, conn_id)
+		stats_mutex.Unlock()
+	}
+
+	go x(conn_id, comment, is_error)
+}
+
+func getStreamBuffer(stream, recv_buffer []byte, b1 []byte) ([]byte, uint32, bool) {
+
+	size := int64(-1)
+	head := byte(0)
+
+	stream_len := len(stream)
+	if size == -1 && stream_len >= 5 {
+		size = int64(binary.LittleEndian.Uint32(stream[1:5]))
+		head = stream[0]
+	}
+
+	recv_b_len := len(recv_buffer)
+	if size == -1 && recv_b_len >= 5 && stream_len == 0 {
+		size = int64(binary.LittleEndian.Uint32(recv_buffer[1:5]))
+		head = recv_buffer[0]
+	}
+
+	if size == -1 && stream_len+recv_b_len >= 5 {
+		d := make([]byte, 0, 16)
+		d = append(d, stream...)
+		d = append(d, recv_buffer...)
+
+		size = int64(binary.LittleEndian.Uint32(d[1:5]))
+		head = d[0]
+	}
+
+	if size > -1 {
+
+		if size > 1024*1024*16 {
+			size = 1024 * 1024 * 16
+		}
+
+		if head == 'B' || head == 'b' {
+
+			if int(size) < cap(b1) {
+				b1 = b1[:0]
+				b1 = append(b1, stream...)
+
+				return b1, uint32(size), true
+			}
+
+			ret := make([]byte, 0, size)
+			ret = append(ret, stream...)
+			return ret, uint32(size), true
+		}
+
+		return []byte{}, uint32(size), false
+	}
+
+	return nil, 0, false
+}
+
+func processHeader(headerData []byte) (bool, int, string) {
+
+	var is_compressed bool = false
+	var guid string = ""
+	var content_length int = -1
+	var err error
+
+	if headerData[0] == '!' {
+		is_compressed = true
+		headerData = headerData[1:]
+	}
+
+	has_guid := bytes.IndexByte(headerData, '|')
+	if has_guid > -1 {
+		guid = string(headerData[has_guid+1:])
+		headerData = headerData[0:has_guid]
+	}
+
+	content_length, err = strconv.Atoi(string(headerData))
+	if err != nil {
+		return false, -1, ""
+	}
+
+	return is_compressed, content_length, guid
+}
+
+func serveSocket(conn *net.TCPConn, handler handlerFunc) {
+
+	// add new connection struct
+	newconn := &connection{}
+	newconn.ip = conn.RemoteAddr().String()
+	newconn.status = "O"
+	newconn.start_time = time.Now().UnixNano()
+	newconn.end_time = 0
+
+	// better error support!
+	defer func(c *connection) {
+		if e := recover(); e != nil {
+
+			var to_log = ""
+
+			to_log += "###################\n"
+			to_log += "#     ERROR!!     #\n"
+			to_log += "###################\n"
+			to_log += "\n"
+			to_log += fmt.Sprintf("Request: %v\n\n", *c)
+			to_log += "Program panic:\n"
+
+			trace := make([]byte, 4096)
+			count := runtime.Stack(trace, true)
+
+			if err, ok := e.(error); ok {
+				to_log += err.Error()
+			}
+
+			if err, ok := e.(string); ok {
+				to_log += "Raw err info: " + err
+			}
+
+			to_log += "\n\n"
+			to_log += fmt.Sprintf("Stack of %d bytes:\n %s\n", count, trace)
+			to_log += "\n"
+
+			to_log += "###################"
+
+			fmt.Println(to_log)
+
+			for _, v := range strings.Split(to_log, "\n") {
+				fmt.Fprintln(os.Stderr, v)
+			}
+
+			var _ = ioutil.WriteFile("panic"+time.Now().Format("20060201_150405")+".txt", []byte(to_log), 0644)
+
+			os.Exit(1)
+		}
+	}(newconn)
+	// <<
+
+	conn_id := atomic.AddUint64(&connections, 1)
+	uh_add(1, 0, 0, 0, 0, 0, 0, 0, 0)
+
+	stats_mutex.Lock()
+	status_connections[conn_id] = newconn
+	stats_mutex.Unlock()
+	// <<
+
+	conn.SetKeepAlive(true)
+	fmt.Println("In ServeSocket")
+
+	message := []byte{}
+	data_stream := []byte{}
+	buffer := make([]byte, 4096*4)
+	b_buf_1 := make([]byte, 1024*64)
+	t_start := int64(0)
+
+	for {
+
+		n := 0
+
+		// we don't have new header yet, read next data packet
+		if len(data_stream) < 5 {
+
+			nr, err := conn.Read(buffer)
+			if err != nil {
+
+				if err != io.EOF {
+					atomic.AddUint64(&errors, 1)
+					uh_add(0, 0, 1, 0, 0, 0, 0, 0, 0)
+					closeConnectionReport(conn_id, fmt.Sprintf("Read error: %s", err), true)
+					break // we have an error - break always!
+				}
+
+				// EOF, break the connection, ONLY if we don't have more data to process!
+				if nr == 0 {
+					break
+				}
+			}
+
+			n = nr
+		}
+
+		if t_start == 0 {
+			t_start = time.Now().UnixNano()
+
+			/*stats_mutex.Lock()
+			status_connections[conn_id].status = "Sr"
+			status_connections[conn_id].start_time = t_start
+			status_connections[conn_id].end_time = 0
+			stats_mutex.Unlock()*/
+		}
+
+		// we need at least 5 bytes of data to pass this step, here we'll read
+		// the message length to pre-allocate its buffer
+		message_len := uint32(0)
+		if tmp_buff, tmp_size, header_ok := getStreamBuffer(data_stream, buffer[:n], b_buf_1); tmp_buff != nil {
+			data_stream = tmp_buff
+			message_len = tmp_size
+
+			// check the header
+			if !header_ok {
+				uh_add(0, 0, 1, 0, 0, 0, 0, 0, 0)
+				atomic.AddUint64(&errors, 1)
+				closeConnectionReport(conn_id, "Header type is incorrect", true)
+				break
+			}
+
+		} else {
+			data_stream = append(data_stream, buffer[:n]...)
+			continue
+		}
+
+		data_stream = append(data_stream, buffer[:n]...)
+
+		// read the remaining data for current packet!
+		for uint32(len(data_stream)) < message_len {
+
+			n, err := conn.Read(buffer)
+			if err != nil {
+				if err != io.EOF {
+					atomic.AddUint64(&errors, 1)
+					uh_add(0, 0, 1, 0, 0, 0, 0, 0, 0)
+					closeConnectionReport(conn_id, fmt.Sprintf("Read2 error: %s", err), true)
+
+					data_stream = nil
+					break // we have an error - break always!
+				}
+
+				// EOF break the connection, ONLY if we don't have more data to process!
+				if n == 0 {
+					data_stream = nil
+					break
+				}
+			}
+
+			data_stream = append(data_stream, buffer[:n]...)
+		}
+
+		if data_stream == nil {
+			break
+		}
+
+		// read message and truncate the length
+		is_compressed := data_stream[0] == 'B'
+		message = data_stream[5:message_len]
+		data_stream = data_stream[message_len:]
+		// <<
+
+		bytes_rec_uncompressed := 0
+		if is_compressed {
+
+			r := flate.NewReader(bytes.NewReader(message))
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(r)
+			bytes_rec_uncompressed = buf.Len() + 5
+			message = buf.Bytes()
+			r.Close()
+
+			if message == nil {
+				uh_add(0, 0, 1, 0, 0, 0, 0, 0, 0)
+				atomic.AddUint64(&errors, 1)
+				closeConnectionReport(conn_id, "Cannot decompres", true)
+				break
+			}
+
+		} else {
+
+			bytes_rec_uncompressed = int(message_len) + 5
+		}
+
+		// We have MESSAGE decoded, start serving the request!
+		params, guid := CreateHSParams(message)
+		if params == nil {
+			uh_add(0, 0, 1, 0, 0, 0, 0, 0, 0)
+			atomic.AddUint64(&errors, 1)
+			closeConnectionReport(conn_id, "Cannot decode header", true)
+			break
+		}
+
+		action := params.GetParam("action", "?")
+		//_pinfo := params.getParamInfo()
+		stats_mutex.Lock()
+		status_connections[conn_id].status = "Ss1"
+		status_connections[conn_id].action = action
+		//[conn_id].data = _pinfo
+		stats_mutex.Unlock()
+
+		if Config.debug {
+			fmt.Println("Rec:", bytes_rec_uncompressed, "b GUID:", string(guid))
+		}
+
+		// remove the message, clean the stream if possible!
+		message = []byte{}
+		if len(data_stream) == 0 {
+			data_stream = []byte{}
+		}
+
+		data := "" //handler(*params)
+
+		// ##############################################################################
+		// <<< Stats code
+
+		time_end := int64(0)
+		if false {
+
+			//time_end := time.Now().UnixNano()
+
+			stats_mutex.Lock()
+			status_connections[conn_id].status = "W"
+			status_connections[conn_id].end_time = time_end
+
+			took := uint64((time_end - status_connections[conn_id].start_time) / 1000)
+
+			if _, ok := stats_actions[action]; !ok {
+				stats_actions[action] = &stats{}
+			}
+
+			_sa := stats_actions[action]
+			_sa.requests++
+			_sa.req_time += took
+			_sa.bytes_received += uint64(message_len)
+			_sa.bytes_rec_uncompressed += uint64(bytes_rec_uncompressed)
+			_sa.bytes_generated += uint64(len(data))
+			stats_mutex.Unlock()
+		}
+		// <<< Stats code ends
+
+		took := 0
+		_sent_bytes := 0
+		if false {
+
+			_sent_bytes = sendBack(conn, data, int(took), string(guid))
+		}
+		_took_full := (time.Now().UnixNano() - t_start) / 1000
+
+		stats_mutex.Lock()
+		status_connections[conn_id].status = "K"
+		//_sa.bytes_sent += uint64(_sent_bytes)
+		//_sa.req_time_full += uint64(_took_full)
+
+		req_time++
+		req_time_full += uint64(_took_full)
+		requests++
+
+		stats_mutex.Unlock()
+
+		uh_add(0, 1, 0, int(took), int(_took_full), len(data), _sent_bytes, int(message_len), bytes_rec_uncompressed)
+		t_start = 0
+	}
+
+	conn.Close()
+	closeConnectionReport(conn_id, "Connection Closed OK", false)
+
+}
+
+func sendBack(conn *net.TCPConn, data string, took int, guid string) int {
+
+	if false {
+		h := sha1.New()
+		h.Write([]byte(data))
+		//fingerprint := fmt.Sprintf("%x", h.Sum(nil))
+	}
+
+	resp := "Request 200 OK\r\nContent-Type: text/html\r\nTook: " + strconv.Itoa(took) + "µs\r\nGUID: " + guid + "\r\n"
+
+	if false && compression_enable && (compression_threshold <= 0 || len(data) > compression_threshold) {
+
+		var b bytes.Buffer
+		w, _ := flate.NewWriter(&b, 2)
+		w.Write([]byte(data))
+		w.Close()
+
+		bytes := b.Bytes()
+
+		resp += "Content-Encoding: gzip / " + strconv.Itoa(len(data)) + "\r\n"
+		resp += "Content-Length: " + strconv.Itoa(len(bytes)) + "\r\n"
+		resp += "\r\n"
+
+		//conn.Write(append([]byte(resp), bytes...))
+		conn.Write([]byte(resp))
+		conn.Write(bytes)
+
+		return len(bytes)
+
+	} else {
+		resp += "Content-Length: " + strconv.Itoa(len(data)) + "\r\n\r\n"
+		conn.Write([]byte(resp))
+		conn.Write([]byte(data))
+	}
+
+	return 10
+}
+
+func main() {
+
+	//http://www.ajanicij.info/content/websocket-tutorial-go
+	//http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
+	//http://greenbytes.de/tech/webdav/draft-ietf-httpbis-p1-messaging-16.html#rfc.section.3.3
+
+	fmt.Print("Handler socket service / Mini HTTP implementation")
+
+}
+
+/* PHP functions for GO */
+func explode(delimiter string, str string) []string {
+	return strings.Split(str, delimiter)
+
+}
+
+func implode(glue string, str []string) string {
+	return strings.Join(str, glue)
+}
+
+func trim(str string) string {
+	return strings.Trim(str, "\r\n\t ")
+}
+
+func in_array(arr []string, needle string) bool {
+	for _, v := range arr {
+		if v == needle {
+			return true
+		}
+	}
+
+	return false
+}
+
+type TimeSpan struct {
+	req_time int64
+}
+
+func NewTimeSpan() *TimeSpan {
+
+	ts := TimeSpan{}
+	ts.req_time = time.Now().UnixNano()
+	return &ts
+
+}
+
+func (ts *TimeSpan) Get() string {
+
+	t := float64((time.Now().UnixNano() - ts.req_time)) / float64(1000000)
+
+	return fmt.Sprintf("%.3fms", t)
+}
+
+func (ts *TimeSpan) GetRaw() float64 {
+
+	return float64((time.Now().UnixNano() - ts.req_time)) / float64(1000000)
+}
+
+// Here goes support for standard handler_socket functionality!
+func handlerServerStatus(data HSParams) string {
+
+	// let's get plugin status!
+	status_additional := ""
+	for _, sp := range statusPlugins {
+		header, content := sp()
+		status_additional += "<div class='container'><h1>" + header + "</h1>" + content + "</div>"
+	}
+
+	if data.GetParam("plugin_only", "") != "" {
+		return status_additional
+	}
+
+	path := ""
+	if _path, err := os.Readlink("/proc/self/exe"); err == nil {
+		path = filepath.Dir(_path) + "/"
+	} else {
+		fmt.Println("Warning: Can't find exe file path")
+	}
+
+	_template, err := ioutil.ReadFile(path + "server-status.html")
+	if err != nil && len(path) > 0 {
+		_template, err = ioutil.ReadFile("server-status.html")
+	}
+
+	if err != nil {
+		_wd, _ := os.Getwd()
+		out := "Error reading server-status.html"
+		out += "<br>Directory: " + "server-status.html"
+		if len(path) > 0 {
+			out += "<br>Alt-Directory: " + (path + "server-status.html")
+		}
+		out += "<br>CD: " + _wd
+		out += "<br><br>--<br>" + (err.Error())
+		return out
+	}
+	template := string(_template)
+	template_vars := GetStatus()
+
+	// additional status
+	template_vars["status_additional"] = status_additional
+	// <<
+
+	for attr, val := range template_vars {
+		template = strings.Replace(template, "##"+attr+"##", val, -1)
+	}
+
+	return template
+}
