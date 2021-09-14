@@ -4,12 +4,14 @@ import (
 	"runtime"
 	"strings"
 
+	"gosol/solana/handle_solana_01"
+	"gosol/solana/handle_solana_info"
+	"gosol/solana/handle_solana_raw"
+	"gosol/solana_proxy"
+
 	"github.com/slawomir-pryczek/handler_socket2"
 	"github.com/slawomir-pryczek/handler_socket2/handle_echo"
 	"github.com/slawomir-pryczek/handler_socket2/handle_profiler"
-
-	"gosol/solana/handle_solana_01"
-	"gosol/solana_proxy"
 )
 
 func main() {
@@ -24,7 +26,9 @@ func main() {
 	handlers := []handler_socket2.ActionHandler{}
 	handlers = append(handlers, &handle_echo.HandleEcho{})
 	handlers = append(handlers, &handle_profiler.HandleProfiler{})
+	handlers = append(handlers, &handle_solana_raw.Handle_solana_raw{})
 	handlers = append(handlers, &handle_solana_01.Handle_solana_01{})
+	handlers = append(handlers, &handle_solana_info.Handle_solana_info{})
 
 	if len(handler_socket2.Config().Get("RUN_SERVICES", "")) > 0 && handler_socket2.Config().Get("RUN_SERVICES", "") != "*" {
 		_h_modified := []handler_socket2.ActionHandler{}

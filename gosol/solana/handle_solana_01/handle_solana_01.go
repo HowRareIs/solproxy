@@ -1,8 +1,6 @@
 package handle_solana_01
 
 import (
-	"encoding/json"
-	"fmt"
 	"gosol/solana_proxy"
 
 	"github.com/slawomir-pryczek/handler_socket2"
@@ -19,7 +17,7 @@ func (this *Handle_solana_01) Info() string {
 }
 
 func (this *Handle_solana_01) GetActions() []string {
-	return []string{"getFirstAvailableBlock", "getBlock"}
+	return []string{"getBlock", "getTransaction", "getBalance", "getTokenSupply"}
 }
 
 func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.HSParams) string {
@@ -48,13 +46,54 @@ func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.
 		return ""
 	}
 
-	pub, priv := solana_proxy.GetMinBlocks()
+	if action == "getTransaction" {
+		hash := data.GetParam("hash", "")
+		if len(hash) == 0 {
+			return `{"error":"provide transaction &hash=123"}`
+		}
 
-	ret := map[string]string{}
-	ret["public"] = fmt.Sprintf("%d", pub)
-	ret["private"] = fmt.Sprintf("%d", priv)
+		client := solana_proxy.GetClient(false)
+		if client == nil {
+			return `{"error":"can't find appropriate client"}`
+		}
+		ret, is_ok := client.GetTransaction(hash)
+		defer client.Release()
 
-	_tmp, _ := json.Marshal(ret)
-	data.FastReturnBNocopy(_tmp)
-	return ""
+		if !is_ok {
+			client2 := solana_proxy.GetClient(true)
+			if client2 != nil {
+				ret, is_ok = client2.GetTransaction(hash)
+				client2.Release()
+			}
+		}
+		data.FastReturnBNocopy(ret)
+		return ""
+	}
+
+	if action == "getBalance" || action == "getTokenSupply" {
+		pubkey := data.GetParam("pubkey", "")
+		if len(pubkey) == 0 {
+			return `{"error":"provide pubkey &pubkey=123, and optionally &commitment="}`
+		}
+		commitment := data.GetParam("commitment", "")
+
+		client := solana_proxy.GetClient(false)
+		if client == nil {
+			return `{"error":"can't find appropriate client"}`
+		}
+		ret, is_ok := client.SimpleCall(action, pubkey, commitment)
+		defer client.Release()
+
+		if !is_ok {
+			client2 := solana_proxy.GetClient(true)
+			if client2 != nil {
+				ret, is_ok = client2.SimpleCall(action, pubkey, commitment)
+				client2.Release()
+			}
+		}
+		data.FastReturnBNocopy(ret)
+		return ""
+	}
+
+	return "No function?!"
 }

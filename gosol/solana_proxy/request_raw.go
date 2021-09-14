@@ -19,9 +19,27 @@ func (this *SOLClient) RunRequest(method string) []byte {
 
 func (this *SOLClient) RunRequestP(method string, params string) []byte {
 
+	mu.Lock()
+	is_throttled, _ := this.IsThrottled()
+	if is_throttled != nil {
+		mu.Unlock()
+		return is_throttled
+	}
+
+	this.stat_total.stat_done++
+	this.stat_last_60[this.stat_last_60_pos].stat_done++
+
+	this.stat_total.stat_request_by_fn[method]++
+	this.stat_last_60[this.stat_last_60_pos].stat_request_by_fn[method]++
+	mu.Unlock()
+
+	node_type := "PRIV"
+	if this.is_public_node {
+		node_type = "PUB"
+	}
 	payload := map[string]string{}
 	now := time.Now().UnixNano()
-	serial := fmt.Sprintf("R/%d/%d", atomic.AddUint64(&serial_no, 1), now)
+	serial := fmt.Sprintf("%s/%d/%d", node_type, atomic.AddUint64(&serial_no, 1), now)
 	payload["jsonrpc"] = "2.0"
 	payload["id"] = serial
 	payload["method"] = method
@@ -73,15 +91,20 @@ func (this *SOLClient) RunRequestP(method string, params string) []byte {
 		return nil
 	}
 
+	fmt.Println(string(resp_body))
 	took := (time.Now().UnixNano() - now) / 1000
 	if took < 0 {
 		took = 0
 	}
 	mu.Lock()
-	this.stat_total.stat_done++
 	this.stat_total.stat_ns_total += uint64(took)
-	this.stat_last_60[this.stat_last_60_pos].stat_done++
 	this.stat_last_60[this.stat_last_60_pos].stat_ns_total += uint64(took)
+
+	this.stat_total.stat_bytes_received += len(resp_body)
+	this.stat_last_60[this.stat_last_60_pos].stat_bytes_received += len(resp_body)
+
+	this.stat_total.stat_bytes_sent += len(post)
+	this.stat_last_60[this.stat_last_60_pos].stat_bytes_sent += len(post)
 	mu.Unlock()
 
 	if !bytes.Contains(resp_body, []byte(serial)) {

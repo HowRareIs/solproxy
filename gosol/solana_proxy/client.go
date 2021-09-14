@@ -16,6 +16,10 @@ type stat struct {
 	stat_error_json_marshal int
 	stat_done               int
 	stat_ns_total           uint64
+
+	stat_request_by_fn  map[string]int
+	stat_bytes_received int
+	stat_bytes_sent     int
 }
 
 type SOLClient struct {
@@ -23,6 +27,7 @@ type SOLClient struct {
 	endpoint              string
 	is_public_node        bool
 	first_available_block int
+	is_disabled           bool
 
 	stat_running     int
 	stat_total       stat
@@ -51,6 +56,11 @@ func RegisterClient(endpoint string, max_conns int, is_public_node bool) {
 	ret.client = &http.Client{Transport: tr, Timeout: 5 * time.Second}
 	ret.endpoint = endpoint
 	ret.is_public_node = is_public_node
+	ret.stat_total.stat_request_by_fn = make(map[string]int)
+	for i := 0; i < len(ret.stat_last_60); i++ {
+		ret.stat_last_60[i].stat_request_by_fn = make(map[string]int)
+	}
+
 	ret._maintenance()
 
 	mu.Lock()

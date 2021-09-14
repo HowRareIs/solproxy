@@ -63,7 +63,6 @@ func (this *SOLClient) GetVersion() (int, int, string, bool) {
 }
 
 func (this *SOLClient) GetBlock(block int) ([]byte, bool) {
-
 	ret := []byte("")
 	if this.version_major == 1 && this.version_minor <= 6 {
 		ret = this.RunRequestP("getConfirmedBlock", fmt.Sprintf("[%d]", block))
@@ -85,10 +84,52 @@ func (this *SOLClient) GetBlock(block int) ([]byte, bool) {
 		return ret, false
 	}
 	return ret, true
+}
 
-	/*tmp, err := json.Marshal(v["result"])
-	if err != nil {
-		return nil
-	}*/
-	//return tmp
+func (this *SOLClient) GetTransaction(hash string) ([]byte, bool) {
+	params := fmt.Sprintf("[\"%s\"]", hash)
+	ret := []byte("")
+	if this.version_major == 1 && this.version_minor <= 6 {
+		ret = this.RunRequestP("getConfirmedTransaction", params)
+	} else {
+		ret = this.RunRequestP("getTransaction", params)
+	}
+
+	if ret == nil {
+		return []byte(`{"error":"No response from server 0x01"}`), false
+	}
+
+	v := make(map[string]interface{})
+	dec := json.NewDecoder(bytes.NewReader(ret))
+	dec.UseNumber()
+	dec.Decode(&v)
+
+	switch v["result"].(type) {
+	case nil:
+		return ret, false
+	}
+	return ret, true
+}
+
+func (this *SOLClient) SimpleCall(method, pubkey string, commitment string) ([]byte, bool) {
+	params := ""
+	if len(commitment) > 0 {
+		params = fmt.Sprintf("[\"%s\",\"%s\"]", pubkey, commitment)
+	} else {
+		params = fmt.Sprintf("[\"%s\"]", pubkey)
+	}
+
+	ret := this.RunRequestP(method, params)
+	if ret == nil {
+		return []byte(`{"error":"No response from server 0x01"}`), false
+	}
+	return ret, true
+}
+
+func (this *SOLClient) GetBalance(pubkey string, commitment string) ([]byte, bool) {
+	return this.SimpleCall("getBalance", pubkey, commitment)
+}
+
+func (this *SOLClient) GetTokenSupply(pubkey string, commitment string) ([]byte, bool) {
+	return this.SimpleCall("getTokenSupply", pubkey, commitment)
 }
