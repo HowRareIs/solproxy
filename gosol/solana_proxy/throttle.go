@@ -1,5 +1,6 @@
 package solana_proxy
 
+/*
 import (
 	"encoding/json"
 	"fmt"
@@ -121,11 +122,12 @@ func (this *SOLClient) GetThrottledStatus() map[string]interface{} {
 	if tmp2 > tmp {
 		tmp = tmp2
 	}
-	ret["used_capacity"] = fmt.Sprintf("%.02f%%", tmp)
 
+	ret["used_capacity"] = fmt.Sprintf("%.02f%%", tmp)
 	ret["throttle_0"] = fmt.Sprintf("Throttle requests (last %d seconds): %d/%d", throttle_probe_req_seconds, req_last_10, throttle_requests)
 	ret["throttle_1"] = fmt.Sprintf("Throttle requests for single method (last %d seconds): %d/%d", throttle_probe_req_seconds, req_last_10_fn, throttle_requests_fn)
 	ret["throttle_2"] = fmt.Sprintf("Throttle data received (last %d seconds): %.02fMB / %.02fMB", throttle_probe_data_seconds, float64(req_last_10_received)/1000/1000, float64(throttle_received)/1000/1000)
 
 	return ret
 }
+*/

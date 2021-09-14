@@ -33,8 +33,8 @@ func (this *Handle_solana_info) HandleAction(action string, data *handler_socket
 			"public":  fmt.Sprintf("%d", pub),
 			"private": fmt.Sprintf("%d", priv)}
 
-		ret["throttle-public"] = solana_proxy.GetClient(true).GetThrottledStatus()
-		ret["throttle-private"] = solana_proxy.GetClient(false).GetThrottledStatus()
+		ret["throttle-public"] = solana_proxy.GetClient(true).GetThrottle().GetThrottledStatus()
+		ret["throttle-private"] = solana_proxy.GetClient(false).GetThrottle().GetThrottledStatus()
 
 		_tmp, _ := json.Marshal(ret)
 		data.FastReturnBNocopy(_tmp)

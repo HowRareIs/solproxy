@@ -5,30 +5,47 @@ import (
 	"strings"
 	"time"
 
+	"gosol/solana_proxy/throttle"
+
 	"github.com/slawomir-pryczek/handler_socket2"
 	"github.com/slawomir-pryczek/handler_socket2/hscommon"
 )
 
+func (this *SOLClient) GetThrottle() throttle.Throttle {
+	_a, _b, _c := this._getThrottleStats()
+	return throttle.Make(this.is_public_node, _a, _b, _c)
+}
+
 func (this *SOLClient) _getThrottleStats() (int, int, int) {
 
-	requests := 0
-	requests_max_per_method := make(map[string]int)
-	data_received := 0
+	stat_requests := 0
+	stat_data_received := 0
+	stat_requests_per_fn_max := 0
 
+	// calculate requests
 	_pos := this.stat_last_60_pos
-	for i := 0; i < throttle_probe_data_seconds; i++ {
-		data_received += this.stat_last_60[_pos].stat_bytes_received
-
+	for i := 0; i < throttle.ThrottleConfig.Throttle_s_requests; i++ {
+		stat_requests += this.stat_last_60[_pos].stat_done
 		_pos-- // take current second into account
 		if _pos < 0 {
 			_pos = 59
 		}
 	}
 
+	// calculate data received
 	_pos = this.stat_last_60_pos
-	for i := 0; i < throttle_probe_req_seconds; i++ {
-		requests += this.stat_last_60[_pos].stat_done
+	for i := 0; i < throttle.ThrottleConfig.Throttle_s_data_received; i++ {
+		stat_data_received += this.stat_last_60[_pos].stat_bytes_received
+		_pos-- // take current second into account
+		if _pos < 0 {
+			_pos = 59
+		}
+	}
 
+	// calculate top function number of calls
+	requests_max_per_method := make(map[string]int)
+	_pos = this.stat_last_60_pos
+	for i := 0; i < throttle.ThrottleConfig.Throttle_s_requests_per_fn_max; i++ {
 		for k, v := range this.stat_last_60[_pos].stat_request_by_fn {
 			requests_max_per_method[k] += v
 		}
@@ -37,14 +54,13 @@ func (this *SOLClient) _getThrottleStats() (int, int, int) {
 			_pos = 59
 		}
 	}
-	requests_per_fn_max := 0
 	for _, v := range requests_max_per_method {
-		if v > requests_per_fn_max {
-			requests_per_fn_max = v
+		if v > stat_requests_per_fn_max {
+			stat_requests_per_fn_max = v
 		}
 	}
 
-	return requests, requests_per_fn_max, data_received
+	return stat_requests, stat_requests_per_fn_max, stat_data_received
 }
 
 func (this *SOLClient) _statsAggr(seconds int) stat {
@@ -111,12 +127,15 @@ func init() {
 		status := ""
 		for _, v := range clients {
 
+			_a, _b, _c := v._getThrottleStats()
+			thr := throttle.Make(v.is_public_node, _a, _b, _c)
+
 			_t := "Private"
 			if v.is_public_node {
 				_t = "Public"
 			}
 
-			_tmp := v.GetThrottledStatus()
+			_tmp := thr.GetThrottledStatus()
 			color := "#44aa44"
 			if _tmp["is_throttled"].(bool) {
 				color = "#aa4444"

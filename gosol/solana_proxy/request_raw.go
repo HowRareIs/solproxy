@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"encoding/json"
+	"gosol/solana_proxy/throttle"
 	"sync/atomic"
 )
 
@@ -20,7 +21,8 @@ func (this *SOLClient) RunRequest(method string) []byte {
 func (this *SOLClient) RunRequestP(method string, params string) []byte {
 
 	mu.Lock()
-	is_throttled, _ := this.IsThrottled()
+	_a, _b, _c := this._getThrottleStats()
+	is_throttled, _ := throttle.Make(this.is_public_node, _a, _b, _c).IsThrottled()
 	if is_throttled != nil {
 		mu.Unlock()
 		return is_throttled
