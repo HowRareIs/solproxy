@@ -16,8 +16,8 @@ import (
 
 func main() {
 
-	solana_proxy.RegisterClient(handler_socket2.Config().Get("SOL_NODE_PRIV", ""), 50, false)
-	solana_proxy.RegisterClient(handler_socket2.Config().Get("SOL_NODE_PUB", ""), 50, true)
+	solana_proxy.RegisterClient(handler_socket2.Config().Get("SOL_NODE_PRIV", ""), false, 50)
+	solana_proxy.RegisterClient(handler_socket2.Config().Get("SOL_NODE_PUB", ""), true, 50)
 
 	num_cpu := runtime.NumCPU() * 2
 	runtime.GOMAXPROCS(num_cpu)

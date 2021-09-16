@@ -1,5 +1,6 @@
 package solana_proxy
 
+/*
 import (
 	"fmt"
 	"strings"
@@ -185,3 +186,4 @@ func init() {
 		return "Solana Proxy", "<pre>" + info + status + "</pre>"
 	})
 }
+*/

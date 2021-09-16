@@ -22,24 +22,30 @@ func (this *Handle_solana_01) GetActions() []string {
 
 func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.HSParams) string {
 
+	sch := solana_proxy.MakeScheduler()
+	if data.GetParamI("public", 0) == 1 {
+		sch.ForcePublic(true)
+	}
+	if data.GetParamI("private", 0) == 1 {
+		sch.ForcePrivate(true)
+	}
+	client := sch.GetAnyClient()
+	if client == nil {
+		return `{"error":"can't find appropriate client"}`
+	}
+
 	if action == "getBlock" {
 		block_no := data.GetParamI("block", -1)
 		if block_no == -1 {
 			return `{"error":"provide block number as &block=123"}`
 		}
 
-		client := solana_proxy.GetClientB(false, block_no)
-		if client == nil {
-			return `{"error":"can't find appropriate client"}`
-		}
+		sch.SetMinBlock(block_no)
 		ret, is_ok := client.GetBlock(block_no)
-		defer client.Release()
-
 		if !is_ok {
-			client2 := solana_proxy.GetClient(true)
-			if client2 != nil {
-				ret, is_ok = client2.GetBlock(block_no)
-				client2.Release()
+			client := sch.GetPublicClient()
+			if client != nil {
+				ret, _ = client.GetBlock(block_no)
 			}
 		}
 		data.FastReturnBNocopy(ret)
@@ -52,18 +58,11 @@ func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.
 			return `{"error":"provide transaction &hash=123"}`
 		}
 
-		client := solana_proxy.GetClient(false)
-		if client == nil {
-			return `{"error":"can't find appropriate client"}`
-		}
 		ret, is_ok := client.GetTransaction(hash)
-		defer client.Release()
-
 		if !is_ok {
-			client2 := solana_proxy.GetClient(true)
-			if client2 != nil {
-				ret, is_ok = client2.GetTransaction(hash)
-				client2.Release()
+			client = sch.GetPublicClient()
+			if client != nil {
+				ret, _ = client.GetTransaction(hash)
 			}
 		}
 		data.FastReturnBNocopy(ret)
@@ -77,18 +76,11 @@ func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.
 		}
 		commitment := data.GetParam("commitment", "")
 
-		client := solana_proxy.GetClient(false)
-		if client == nil {
-			return `{"error":"can't find appropriate client"}`
-		}
 		ret, is_ok := client.SimpleCall(action, pubkey, commitment)
-		defer client.Release()
-
 		if !is_ok {
-			client2 := solana_proxy.GetClient(true)
-			if client2 != nil {
-				ret, is_ok = client2.SimpleCall(action, pubkey, commitment)
-				client2.Release()
+			client = sch.GetPublicClient()
+			if client != nil {
+				ret, _ = client.SimpleCall(action, pubkey, commitment)
 			}
 		}
 		data.FastReturnBNocopy(ret)

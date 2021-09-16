@@ -1,6 +1,5 @@
-package solana_proxy
+package client
 
-/*
 import (
 	"bytes"
 	"fmt"
@@ -10,22 +9,25 @@ import (
 
 	"encoding/json"
 	"gosol/solana_proxy/throttle"
-	"sync/atomic"
 )
 
-var serial_no = uint64(0)
+func (this *SOLClient) RequestBasic(method_param ...string) []byte {
 
-func RunRequest(method string) []byte {
-	return RunRequestP(method, "")
-}
+	//	## Prepare parameters, check if the node is running
+	method := method_param[0]
+	params := ""
+	if len(method_param) == 2 {
+		params = method_param[1]
+	}
+	if len(method_param) > 2 {
+		panic("Too many parameters!")
+	}
 
-func RunRequestP(method string, params string) []byte {
-
-	mu.Lock()
-	_a, _b, _c := this._getThrottleStats()
+	this.mu.Lock()
+	_a, _b, _c := this._statsGetThrottle()
 	is_throttled, _ := throttle.Make(this.is_public_node, _a, _b, _c).IsThrottled()
 	if is_throttled != nil {
-		mu.Unlock()
+		this.mu.Unlock()
 		return is_throttled
 	}
 
@@ -34,24 +36,30 @@ func RunRequestP(method string, params string) []byte {
 
 	this.stat_total.stat_request_by_fn[method]++
 	this.stat_last_60[this.stat_last_60_pos].stat_request_by_fn[method]++
-	mu.Unlock()
 
+	this.serial_no++
+	serial_no := this.serial_no
+	this.stat_running++
+	this.mu.Unlock()
+
+	// ## generate serial and prepare data
 	node_type := "PRIV"
 	if this.is_public_node {
 		node_type = "PUB"
 	}
 	payload := map[string]string{}
 	now := time.Now().UnixNano()
-	serial := fmt.Sprintf("%s/%d/%d", node_type, atomic.AddUint64(&serial_no, 1), now)
+	serial := fmt.Sprintf("%s/%d/%d", node_type, serial_no, now)
 	payload["jsonrpc"] = "2.0"
 	payload["id"] = serial
 	payload["method"] = method
 
 	post, m_err := json.Marshal(payload)
 	if m_err != nil {
-		mu.Lock()
+		this.mu.Lock()
 		this.stat_total.stat_error_json_marshal++
-		mu.Unlock()
+		this.stat_running--
+		this.mu.Unlock()
 		return nil
 	}
 
@@ -60,15 +68,15 @@ func RunRequestP(method string, params string) []byte {
 		post = append(post, []byte(`,"params":`)...)
 		post = append(post, []byte(params)...)
 		post = append(post, '}')
-		fmt.Println(">>>", string(post))
 	}
 
 	req, err := http.NewRequest("POST", this.endpoint, bytes.NewBuffer(post))
 	if err != nil {
-		mu.Lock()
+		this.mu.Lock()
 		this.stat_total.stat_error_req++
 		this.stat_last_60[this.stat_last_60_pos].stat_error_req++
-		mu.Unlock()
+		this.stat_running--
+		this.mu.Unlock()
 		return nil
 	}
 
@@ -78,19 +86,21 @@ func RunRequestP(method string, params string) []byte {
 		defer resp.Body.Close()
 	}
 	if err != nil {
-		mu.Lock()
+		this.mu.Lock()
 		this.stat_total.stat_error_resp++
 		this.stat_last_60[this.stat_last_60_pos].stat_error_resp++
-		mu.Unlock()
+		this.stat_running--
+		this.mu.Unlock()
 		return nil
 	}
 
 	resp_body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		mu.Lock()
+		this.mu.Lock()
 		this.stat_total.stat_error_resp_read++
 		this.stat_last_60[this.stat_last_60_pos].stat_error_resp_read++
-		mu.Unlock()
+		this.stat_running--
+		this.mu.Unlock()
 		return nil
 	}
 
@@ -99,7 +109,7 @@ func RunRequestP(method string, params string) []byte {
 	if took < 0 {
 		took = 0
 	}
-	mu.Lock()
+	this.mu.Lock()
 	this.stat_total.stat_ns_total += uint64(took)
 	this.stat_last_60[this.stat_last_60_pos].stat_ns_total += uint64(took)
 
@@ -108,11 +118,11 @@ func RunRequestP(method string, params string) []byte {
 
 	this.stat_total.stat_bytes_sent += len(post)
 	this.stat_last_60[this.stat_last_60_pos].stat_bytes_sent += len(post)
-	mu.Unlock()
+	this.stat_running--
+	this.mu.Unlock()
 
 	if !bytes.Contains(resp_body, []byte(serial)) {
 		return nil
 	}
 	return resp_body
 }
-*/

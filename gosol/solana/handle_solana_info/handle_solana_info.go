@@ -24,6 +24,11 @@ func (this *Handle_solana_info) GetActions() []string {
 
 func (this *Handle_solana_info) HandleAction(action string, data *handler_socket2.HSParams) string {
 
+	_round := func(n float64) float64 {
+		tmp := int(n * 1000.0)
+		return float64(tmp/100) / 10.0
+	}
+
 	if action == "getSolanaInfo" {
 
 		pub, priv := solana_proxy.GetMinBlocks()
@@ -33,8 +38,41 @@ func (this *Handle_solana_info) HandleAction(action string, data *handler_socket
 			"public":  fmt.Sprintf("%d", pub),
 			"private": fmt.Sprintf("%d", priv)}
 
-		ret["throttle-public"] = solana_proxy.GetClient(true).GetThrottle().GetThrottledStatus()
-		ret["throttle-private"] = solana_proxy.GetClient(false).GetThrottle().GetThrottledStatus()
+		sch := solana_proxy.MakeScheduler()
+		if data.GetParamI("public", 0) == 1 {
+			sch.ForcePublic(true)
+		}
+		if data.GetParamI("private", 0) == 1 {
+			sch.ForcePrivate(true)
+		}
+
+		utilization_total := float64(0)
+		sum := 0
+		for num, v := range sch.GetAll(true, false) {
+			key := fmt.Sprintf("throttle-public-%d", num)
+			tmp := v.GetThrottle().GetThrottledStatus()
+			ret[key] = tmp
+			utilization_total += tmp["p_capacity_used"].(float64)
+			sum++
+		}
+		if sum == 0 {
+			sum = 1
+		}
+		ret["percent-capacity-used-public"] = _round(utilization_total / float64(sum))
+
+		utilization_total = 0
+		sum = 0
+		for num, v := range sch.GetAll(false, false) {
+			key := fmt.Sprintf("throttle-private-%d", num)
+			tmp := v.GetThrottle().GetThrottledStatus()
+			ret[key] = tmp
+			utilization_total += tmp["p_capacity_used"].(float64)
+			sum++
+		}
+		if sum == 0 {
+			sum = 1
+		}
+		ret["percent-capacity-used-private"] = _round(utilization_total / float64(sum))
 
 		_tmp, _ := json.Marshal(ret)
 		data.FastReturnBNocopy(_tmp)

@@ -58,7 +58,9 @@ func (this Throttle) GetUsedCapacity() float64 {
 	if tmp2 > tmp {
 		tmp = tmp2
 	}
-	return tmp
+
+	_tmp := int(tmp * 1000.0)
+	return float64(_tmp/100) / 10.0
 }
 
 func (this Throttle) IsThrottled() ([]byte, string) {
@@ -122,20 +124,19 @@ func (this Throttle) GetThrottledStatus() map[string]interface{} {
 	if !this.is_public_node {
 		ret["throttled_comment"] = throttled_comment
 		ret["is_throttled"] = false
-		ret["used_capacity_percent"] = "0.00%"
+		ret["p_capacity_used"] = float64(0)
 		return ret
 	}
 
 	ret["throttled_comment"] = throttled_comment
 	ret["is_throttled"] = throttled_data != nil
 
-	ret["used_capacity"] = fmt.Sprintf("%.02f%%", this.GetUsedCapacity())
+	ret["p_capacity_used"] = this.GetUsedCapacity()
 	ret["throttle_0"] = fmt.Sprintf("Throttle requests (last %d seconds): %d/%d",
 		ThrottleConfig.Throttle_s_requests, this.requests, ThrottleConfig.Throttle_requests)
 	ret["throttle_1"] = fmt.Sprintf("Throttle requests for single method (last %d seconds): %d/%d",
 		ThrottleConfig.Throttle_s_requests_per_fn_max, this.requests_per_fn_max, ThrottleConfig.Throttle_requests_per_fn_max)
 	ret["throttle_2"] = fmt.Sprintf("Throttle data received (last %d seconds): %.02fMB / %.02fMB",
 		ThrottleConfig.Throttle_s_data_received, float64(this.data_received)/1000/1000, float64(ThrottleConfig.Throttle_data_received)/1000/1000)
-
 	return ret
 }

@@ -1,6 +1,5 @@
-package solana_proxy
+package client
 
-/*
 import (
 	"bytes"
 	"fmt"
@@ -12,7 +11,7 @@ import (
 
 func (this *SOLClient) GetFirstAvailableBlock() (int, bool) {
 
-	ret := this.RunRequest("getFirstAvailableBlock")
+	ret := this.RequestBasic("getFirstAvailableBlock")
 	if ret == nil {
 		return 0, false
 	}
@@ -37,7 +36,7 @@ func (this *SOLClient) GetFirstAvailableBlock() (int, bool) {
 
 func (this *SOLClient) GetVersion() (int, int, string, bool) {
 
-	ret := this.RunRequest("getVersion")
+	ret := this.RequestBasic("getVersion")
 	if ret == nil {
 		return 0, 0, "", false
 	}
@@ -66,9 +65,9 @@ func (this *SOLClient) GetVersion() (int, int, string, bool) {
 func (this *SOLClient) GetBlock(block int) ([]byte, bool) {
 	ret := []byte("")
 	if this.version_major == 1 && this.version_minor <= 6 {
-		ret = this.RunRequestP("getConfirmedBlock", fmt.Sprintf("[%d]", block))
+		ret = this.RequestBasic("getConfirmedBlock", fmt.Sprintf("[%d]", block))
 	} else {
-		ret = this.RunRequestP("getBlock", fmt.Sprintf("[%d]", block))
+		ret = this.RequestBasic("getBlock", fmt.Sprintf("[%d]", block))
 	}
 
 	if ret == nil {
@@ -91,9 +90,9 @@ func (this *SOLClient) GetTransaction(hash string) ([]byte, bool) {
 	params := fmt.Sprintf("[\"%s\"]", hash)
 	ret := []byte("")
 	if this.version_major == 1 && this.version_minor <= 6 {
-		ret = this.RunRequestP("getConfirmedTransaction", params)
+		ret = this.RequestBasic("getConfirmedTransaction", params)
 	} else {
-		ret = this.RunRequestP("getTransaction", params)
+		ret = this.RequestBasic("getTransaction", params)
 	}
 
 	if ret == nil {
@@ -120,7 +119,7 @@ func (this *SOLClient) SimpleCall(method, pubkey string, commitment string) ([]b
 		params = fmt.Sprintf("[\"%s\"]", pubkey)
 	}
 
-	ret := this.RunRequestP(method, params)
+	ret := this.RequestBasic(method, params)
 	if ret == nil {
 		return []byte(`{"error":"No response from server 0x01"}`), false
 	}
@@ -134,4 +133,3 @@ func (this *SOLClient) GetBalance(pubkey string, commitment string) ([]byte, boo
 func (this *SOLClient) GetTokenSupply(pubkey string, commitment string) ([]byte, bool) {
 	return this.SimpleCall("getTokenSupply", pubkey, commitment)
 }
-*/

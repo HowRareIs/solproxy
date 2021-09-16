@@ -1,6 +1,5 @@
-package solana_proxy
+package client
 
-/*
 import (
 	"fmt"
 	"time"
@@ -9,7 +8,7 @@ import (
 func (this *SOLClient) _maintenance() {
 
 	_maint_stat := func(now int64) {
-		mu.Lock()
+		this.mu.Lock()
 		_p := int(now % 60)
 		this.stat_last_60_pos = _p
 		this.stat_last_60[_p].stat_done = 0
@@ -24,14 +23,14 @@ func (this *SOLClient) _maintenance() {
 		this.stat_last_60[_p].stat_bytes_received = 0
 		this.stat_last_60[_p].stat_bytes_sent = 0
 
-		_d, _requests_done := this.IsAlive()
+		_d, _requests_done := this._statsIsDead()
 		this.is_disabled = _d
 		if _requests_done < 5 {
 			go func() {
 				this.GetVersion() // run a request to check if the node is alive
 			}()
 		}
-		mu.Unlock()
+		this.mu.Unlock()
 	}
 
 	_update_version := func() {
@@ -40,36 +39,25 @@ func (this *SOLClient) _maintenance() {
 			fmt.Println("Can't get version for: ", this.endpoint)
 			return
 		}
-		mu.Lock()
+		this.mu.Lock()
 		this.version_major, this.version_minor, this.version = _a, _b, _c
-		mu.Unlock()
+		this.mu.Unlock()
 	}
-	_maint := func() {
-		if !this.is_public_node {
-			_b, _ok := this.GetFirstAvailableBlock()
-			if !_ok {
-				return
-			}
 
-			mu.Lock()
-			this.first_available_block = _b
-			should_update_version := this.version_major == 0
-			mu.Unlock()
-			if should_update_version {
-				_update_version()
-			}
+	_update_first_block := func() {
+		_b, _ok := this.GetFirstAvailableBlock()
+		if !_ok {
 			return
 		}
 
-		mu.Lock()
-		should_update_version := this.version_major == 0
-		mu.Unlock()
-		if should_update_version {
-			_update_version()
-		}
+		this.mu.Lock()
+		this.first_available_block = _b
+		this.mu.Unlock()
 	}
 
-	_maint()
+	// run first update, get all data required for the node to work!
+	_update_version()
+	_update_first_block()
 	go func() {
 		for {
 			now := time.Now().Unix()
@@ -79,8 +67,15 @@ func (this *SOLClient) _maintenance() {
 				continue
 			}
 
+			// update version and first block
 			now = _t
-			_maint()
+
+			if (now%2 == 0 && !this.is_public_node) || now%20 == 0 {
+				_update_version()
+			}
+			if (now%2 == 1 && !this.is_public_node) || now%20 == 10 {
+				_update_first_block()
+			}
 		}
 	}()
 
@@ -88,7 +83,7 @@ func (this *SOLClient) _maintenance() {
 	go func() {
 		for {
 			now := time.Now().Unix()
-			time.Sleep(250 * time.Millisecond)
+			time.Sleep(200 * time.Millisecond)
 			_t := time.Now().Unix()
 			if now >= _t {
 				continue
@@ -99,5 +94,3 @@ func (this *SOLClient) _maintenance() {
 		}
 	}()
 }
-
-*/

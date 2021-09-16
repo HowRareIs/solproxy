@@ -1,5 +1,6 @@
 package solana_proxy
 
+/*
 var probe_isalive_seconds = 30
 
 func (this *SOLClient) IsAlive() (bool, int) {
@@ -25,3 +26,4 @@ func (this *SOLClient) IsAlive() (bool, int) {
 	dead := stat_errors*5 > stat_requests
 	return !dead, stat_requests
 }
+*/
