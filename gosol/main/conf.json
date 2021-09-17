@@ -1,18 +1,14 @@
 {
-"BIND_TO":"h127.0.0.1:7778,127.0.0.1:7777,u127.0.0.1:7777",
-"BIND_TO_162.55.91.243":"162.55.91.243:7777,h162.55.91.243:7778",
-"BIND_TO_192.168.10.1":"h192.168.10.1:7778,192.168.10.1:7777",
+"BIND_TO":               "127.0.0.1:7777,h127.0.0.1:7778,u127.0.0.1:7777",
+"BIND_TO_162.55.91.243": "162.55.91.243:7777,h162.55.91.243:7778",
+"BIND_TO_192.168.10.1":  "192.168.10.1:7777,h192.168.10.1:7778",
 
 "FORCE_START":true,
 "DEBUG":false,
 "VERBOSE":false,
 "RUN_SERVICES":"*",
 
-"NETWORK_ID":70,
-"CRYPTO_SALT":"32097890fnfssdFSDFIOSUfsd89f$#(&SDFJSFDSgdgfd987$#SDF",
-"SECRET":"fghgdf87/fsdivcx9784732j",
-"DB_SERVICE":"http://192.168.10.200/adserver2/adserve/export-db2/",
 
 "SOL_NODE_PRIV":"http://162.55.91.243:8899",
-"SOL_NODE_PUB":"https://api.mainnet-beta.solana.com"
+"SOL_NODE_PUB":"http://www.cointaxes.io/solana_proxy.php,http://adsbackend.com/bsc9182/solana_proxy.php,http://api.mainnet-beta.solana.com"
 }
