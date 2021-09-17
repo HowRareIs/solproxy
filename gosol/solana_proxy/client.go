@@ -23,7 +23,7 @@ func RegisterClient(endpoint string, is_public_node bool, max_conns int) {
 func GetMinBlocks() (int, int) {
 
 	mu.RLock()
-	mu.RUnlock()
+	defer mu.RUnlock()
 
 	// a public; b private
 	a, b := -1, -1

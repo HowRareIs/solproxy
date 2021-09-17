@@ -104,7 +104,6 @@ func (this *SOLClient) RequestBasic(method_param ...string) []byte {
 		return nil
 	}
 
-	fmt.Println(string(resp_body))
 	took := (time.Now().UnixNano() - now) / 1000
 	if took < 0 {
 		took = 0
@@ -122,6 +121,13 @@ func (this *SOLClient) RequestBasic(method_param ...string) []byte {
 	this.mu.Unlock()
 
 	if !bytes.Contains(resp_body, []byte(serial)) {
+
+		fmt.Println(">EROR IN RESPONSE>", string(resp_body))
+
+		this.mu.Lock()
+		this.stat_total.stat_error_resp++
+		this.stat_last_60[this.stat_last_60_pos].stat_error_resp++
+		this.mu.Unlock()
 		return nil
 	}
 	return resp_body

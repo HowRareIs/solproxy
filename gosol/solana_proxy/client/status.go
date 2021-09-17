@@ -80,7 +80,10 @@ func (this *SOLClient) GetStatus() string {
 	table.SetClass("tab sol")
 
 	status += "\n"
-	status += _t + " Node Endpoint: " + this.endpoint + " <i>v" + this.version + "</i> ... Requests running now: " + fmt.Sprintf("%d", this.stat_running) + "\n"
+	status += _t + " Node Endpoint: " + this.endpoint + " <i>v" + this.version + "</i>"
+	status += fmt.Sprintf(" ... Requests running now: %d ", this.stat_running)
+	status += fmt.Sprintf("Utilization: %.02f%%\n", thr.GetUsedCapacity())
+
 	status += node_stats
 	status += throttle_stats
 

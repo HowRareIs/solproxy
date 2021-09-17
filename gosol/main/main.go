@@ -16,8 +16,20 @@ import (
 
 func main() {
 
-	solana_proxy.RegisterClient(handler_socket2.Config().Get("SOL_NODE_PRIV", ""), false, 50)
-	solana_proxy.RegisterClient(handler_socket2.Config().Get("SOL_NODE_PUB", ""), true, 50)
+	_register := func(endpoint string, public bool) {
+		max_conn := 50
+		if public {
+			max_conn = 10
+		}
+		endpoint = strings.Trim(endpoint, "\r\n\t ")
+		solana_proxy.RegisterClient(endpoint, public, max_conn)
+	}
+	for _, endpoint := range strings.Split(handler_socket2.Config().Get("SOL_NODE_PRIV", ""), ",") {
+		_register(endpoint, false)
+	}
+	for _, endpoint := range strings.Split(handler_socket2.Config().Get("SOL_NODE_PUB", ""), ",") {
+		_register(endpoint, true)
+	}
 
 	num_cpu := runtime.NumCPU() * 2
 	runtime.GOMAXPROCS(num_cpu)

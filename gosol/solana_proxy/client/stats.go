@@ -4,11 +4,6 @@ import (
 	"gosol/solana_proxy/throttle"
 )
 
-func (this *SOLClient) GetThrottle() throttle.Throttle {
-	_a, _b, _c := this._statsGetThrottle()
-	return throttle.Make(this.is_public_node, _a, _b, _c)
-}
-
 func (this *SOLClient) _statsGetThrottle() (int, int, int) {
 
 	stat_requests := 0

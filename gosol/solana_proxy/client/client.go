@@ -1,6 +1,7 @@
 package client
 
 import (
+	"gosol/solana_proxy/throttle"
 	"net/http"
 	"sync"
 	"time"
@@ -47,6 +48,8 @@ type solclientinfo struct {
 	Is_public_node        bool
 	First_available_block int
 	Is_disabled           bool
+
+	Throttle throttle.Throttle
 }
 
 func MakeClient(endpoint string, is_public_node bool, max_conns int) *SOLClient {
@@ -71,7 +74,22 @@ func MakeClient(endpoint string, is_public_node bool, max_conns int) *SOLClient 
 }
 
 func (this *SOLClient) GetInfo() *solclientinfo {
-	ret := solclientinfo{this.endpoint, this.is_public_node,
-		this.first_available_block, this.is_disabled}
+
+	ret := solclientinfo{}
+
+	this.mu.Lock()
+	ret.Endpoint = this.endpoint
+	ret.Is_public_node = this.is_public_node
+	ret.First_available_block = this.first_available_block
+	ret.Is_disabled = this.is_disabled
+	_a, _b, _c := this._statsGetThrottle()
+	this.mu.Unlock()
+
+	ret.Throttle = throttle.Make(this.is_public_node, _a, _b, _c)
 	return &ret
+}
+
+func (this *SOLClient) GetThrottle() throttle.Throttle {
+	_a, _b, _c := this._statsGetThrottle()
+	return throttle.Make(this.is_public_node, _a, _b, _c)
 }
