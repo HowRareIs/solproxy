@@ -97,8 +97,10 @@ func (this *SOLClient) _statsIsDead() (bool, int) {
 		}
 	}
 
-	// make sure we have some requests
-	if stat_requests <= 2 {
+	// make sure we have some requests,
+	// if we have no requests we assume something is wrong and we mark the node as deas
+	// if there are no requests but we're in conserving mode, let's use what we have
+	if stat_requests <= 2 && this.attr&CLIENT_CONSERVE_REQUESTS == 0 {
 		return true, stat_requests
 	}
 

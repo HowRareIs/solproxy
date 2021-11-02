@@ -45,7 +45,7 @@ func (this *SOLClient) GetStatus() string {
 
 	status := ""
 	_a, _b, _c := this._statsGetThrottle()
-	thr := throttle.Make(this.is_public_node, _a, _b, _c)
+	thr := throttle.Make(this.attr&CLIENT_DISABLE_THROTTLING == 0, _a, _b, _c)
 
 	_t := "Private"
 	if this.is_public_node {
@@ -86,6 +86,7 @@ func (this *SOLClient) GetStatus() string {
 
 	status += node_stats
 	status += throttle_stats
+	status += this.attr.Display()
 
 	table.AddRow(_get_row("Last 10s", this._statsGetAggr(10), 10, "-")...)
 	table.AddRow(_get_row("Last 60s", this._statsGetAggr(59), 59, "-")...)

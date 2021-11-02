@@ -34,6 +34,10 @@ func (this *scheduler) _pick_next() *client.SOLClient {
 		if info.Is_public_node {
 			_r += 5000000
 		}
+		// this node is alternative, use it as last resort only
+		if info.Attr&client.CLIENT_ALT > 0 {
+			_r += 5000000000
+		}
 
 		if min == -1 || _r < min {
 			min = _r

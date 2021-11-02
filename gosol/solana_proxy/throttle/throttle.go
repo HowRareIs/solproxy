@@ -6,7 +6,7 @@ import (
 )
 
 type Throttle struct {
-	is_public_node bool
+	throttling_enabled bool
 
 	requests            int
 	requests_per_fn_max int
@@ -40,7 +40,7 @@ func Make(is_public_node bool, requests, requests_per_fn_max, data_received int)
 }
 
 func (this Throttle) GetUsedCapacity() float64 {
-	if !this.is_public_node {
+	if !this.throttling_enabled {
 		return 0
 	}
 
@@ -64,7 +64,7 @@ func (this Throttle) GetUsedCapacity() float64 {
 }
 
 func (this Throttle) IsThrottled() ([]byte, string) {
-	if !this.is_public_node {
+	if !this.throttling_enabled {
 		return nil, "Throttling disabled."
 	}
 
@@ -121,7 +121,7 @@ func (this Throttle) GetThrottledStatus() map[string]interface{} {
 	ret := map[string]interface{}{}
 
 	throttled_data, throttled_comment := this.IsThrottled()
-	if !this.is_public_node {
+	if !this.throttling_enabled {
 		ret["throttled_comment"] = throttled_comment
 		ret["is_throttled"] = false
 		ret["p_capacity_used"] = float64(0)

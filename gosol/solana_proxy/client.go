@@ -12,8 +12,14 @@ func init() {
 	clients = make([]*client.SOLClient, 0, 10)
 }
 
-func RegisterClient(endpoint string, is_public_node bool, max_conns int) {
+func RegisterClient(endpoint string, is_public_node bool, is_alt_node bool, max_conns int) {
 	cl := client.MakeClient(endpoint, is_public_node, max_conns)
+	if !is_public_node {
+		cl.SetAttr(client.CLIENT_DISABLE_THROTTLING)
+	}
+	if is_alt_node {
+		cl.SetAttr(client.CLIENT_ALT | client.CLIENT_DISABLE_THROTTLING | client.CLIENT_CONSERVE_REQUESTS)
+	}
 
 	mu.Lock()
 	clients = append(clients, cl)

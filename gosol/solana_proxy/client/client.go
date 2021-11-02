@@ -23,6 +23,41 @@ type stat struct {
 	stat_bytes_sent     int
 }
 
+type SOLClientAttr int
+
+const (
+	CLIENT_NORMAL             SOLClientAttr = 0
+	CLIENT_DISABLE_THROTTLING               = 1 << 1
+	CLIENT_ALT                              = 1 << 2
+	CLIENT_CONSERVE_REQUESTS                = 1 << 3
+)
+
+func (this SOLClientAttr) Display() string {
+
+	ret := ""
+	if this&CLIENT_DISABLE_THROTTLING > 0 {
+		ret += "✓"
+	} else {
+		ret += "x"
+	}
+	ret += "Throttling "
+
+	if this&CLIENT_CONSERVE_REQUESTS > 0 {
+		ret += "✓"
+	} else {
+		ret += "x"
+	}
+	ret += "Conserve requests "
+
+	if this&CLIENT_ALT > 0 {
+		ret += "✓"
+	} else {
+		ret += "x"
+	}
+	ret += "Alt (low priority)"
+	return ret
+}
+
 type SOLClient struct {
 	client                *http.Client
 	endpoint              string
@@ -41,6 +76,8 @@ type SOLClient struct {
 
 	mu        sync.Mutex
 	serial_no uint64
+
+	attr SOLClientAttr
 }
 
 type solclientinfo struct {
@@ -50,6 +87,7 @@ type solclientinfo struct {
 	Is_disabled           bool
 
 	Throttle throttle.Throttle
+	Attr     SOLClientAttr
 }
 
 func MakeClient(endpoint string, is_public_node bool, max_conns int) *SOLClient {
@@ -73,6 +111,10 @@ func MakeClient(endpoint string, is_public_node bool, max_conns int) *SOLClient 
 	return &ret
 }
 
+func (this *SOLClient) SetAttr(attrs SOLClientAttr) {
+	this.attr = attrs
+}
+
 func (this *SOLClient) GetInfo() *solclientinfo {
 
 	ret := solclientinfo{}
@@ -85,11 +127,12 @@ func (this *SOLClient) GetInfo() *solclientinfo {
 	_a, _b, _c := this._statsGetThrottle()
 	this.mu.Unlock()
 
-	ret.Throttle = throttle.Make(this.is_public_node, _a, _b, _c)
+	ret.Throttle = throttle.Make(this.attr&CLIENT_DISABLE_THROTTLING == 0, _a, _b, _c)
+	ret.Attr = this.attr
 	return &ret
 }
 
 func (this *SOLClient) GetThrottle() throttle.Throttle {
 	_a, _b, _c := this._statsGetThrottle()
-	return throttle.Make(this.is_public_node, _a, _b, _c)
+	return throttle.Make(this.attr&CLIENT_DISABLE_THROTTLING == 0, _a, _b, _c)
 }

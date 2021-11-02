@@ -24,8 +24,10 @@ func (this *SOLClient) RequestBasic(method_param ...string) []byte {
 	}
 
 	this.mu.Lock()
+
+	// throttling is not disabled
 	_a, _b, _c := this._statsGetThrottle()
-	is_throttled, _ := throttle.Make(this.is_public_node, _a, _b, _c).IsThrottled()
+	is_throttled, _ := throttle.Make(this.attr&CLIENT_DISABLE_THROTTLING == 0, _a, _b, _c).IsThrottled()
 	if is_throttled != nil {
 		this.mu.Unlock()
 		return is_throttled

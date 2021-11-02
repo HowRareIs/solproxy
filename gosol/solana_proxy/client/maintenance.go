@@ -25,7 +25,7 @@ func (this *SOLClient) _maintenance() {
 
 		_d, _requests_done := this._statsIsDead()
 		this.is_disabled = _d
-		if _requests_done < 5 {
+		if _requests_done < 5 && this.attr&CLIENT_CONSERVE_REQUESTS == 0 {
 			go func() {
 				this.GetVersion() // run a request to check if the node is alive
 			}()
@@ -69,6 +69,17 @@ func (this *SOLClient) _maintenance() {
 
 			// update version and first block
 			now = _t
+
+			// conserve requests, don't probe as often
+			if this.attr&CLIENT_CONSERVE_REQUESTS > 0 {
+				if now%120 == 0 {
+					_update_version()
+				}
+				if now%120 == 60 {
+					_update_first_block()
+				}
+				continue
+			}
 
 			if (now%2 == 0 && !this.is_public_node) || now%20 == 0 {
 				_update_version()
