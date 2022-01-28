@@ -11,6 +11,51 @@ import (
 	"gosol/solana_proxy/throttle"
 )
 
+const FORWARD_OK = 0
+const FORWARD_ERROR = 1
+const FORWARD_THROTTLE = 10
+
+func (this *SOLClient) RequestForward(body []byte) (int, []byte) {
+
+	type method_def struct {
+		Method string `json:"method"`
+	}
+	tmp := &method_def{}
+	if json.Unmarshal(body, tmp) != nil {
+		return FORWARD_ERROR, []byte("{\"error\":\"json unmarshall error\"}")
+	}
+	method := tmp.Method
+	if len(method) == 0 {
+		method = "?"
+	}
+
+	this.mu.Lock()
+	// throttling is not disabled
+	_a, _b, _c := this._statsGetThrottle()
+	is_throttled, _ := throttle.Make(this.attr&CLIENT_DISABLE_THROTTLING == 0, _a, _b, _c).IsThrottled()
+	if is_throttled != nil {
+		this.mu.Unlock()
+		return FORWARD_THROTTLE, nil
+	}
+
+	this.stat_total.stat_done++
+	this.stat_last_60[this.stat_last_60_pos].stat_done++
+
+	this.stat_total.stat_request_by_fn[method]++
+	this.stat_last_60[this.stat_last_60_pos].stat_request_by_fn[method]++
+
+	this.serial_no++
+	this.stat_running++
+	this.mu.Unlock()
+
+	now := time.Now().UnixNano()
+	resp_body := this._docall(now, body)
+	if resp_body == nil {
+		return FORWARD_ERROR, []byte("{\"error\":\"nil response from docall\"}")
+	}
+	return FORWARD_OK, resp_body
+}
+
 func (this *SOLClient) RequestBasic(method_param ...string) []byte {
 
 	//	## Prepare parameters, check if the node is running
@@ -72,6 +117,21 @@ func (this *SOLClient) RequestBasic(method_param ...string) []byte {
 		post = append(post, '}')
 	}
 
+	resp_body := this._docall(now, post)
+	if !bytes.Contains(resp_body, []byte(serial)) {
+
+		fmt.Println(">EROR IN RESPONSE>", string(resp_body))
+
+		this.mu.Lock()
+		this.stat_total.stat_error_resp++
+		this.stat_last_60[this.stat_last_60_pos].stat_error_resp++
+		this.mu.Unlock()
+		return nil
+	}
+	return resp_body
+}
+
+func (this *SOLClient) _docall(ts_started int64, post []byte) []byte {
 	req, err := http.NewRequest("POST", this.endpoint, bytes.NewBuffer(post))
 	if err != nil {
 		this.mu.Lock()
@@ -106,7 +166,7 @@ func (this *SOLClient) RequestBasic(method_param ...string) []byte {
 		return nil
 	}
 
-	took := (time.Now().UnixNano() - now) / 1000
+	took := (time.Now().UnixNano() - ts_started) / 1000
 	if took < 0 {
 		took = 0
 	}
@@ -121,16 +181,5 @@ func (this *SOLClient) RequestBasic(method_param ...string) []byte {
 	this.stat_last_60[this.stat_last_60_pos].stat_bytes_sent += len(post)
 	this.stat_running--
 	this.mu.Unlock()
-
-	if !bytes.Contains(resp_body, []byte(serial)) {
-
-		fmt.Println(">EROR IN RESPONSE>", string(resp_body))
-
-		this.mu.Lock()
-		this.stat_total.stat_error_resp++
-		this.stat_last_60[this.stat_last_60_pos].stat_error_resp++
-		this.mu.Unlock()
-		return nil
-	}
 	return resp_body
 }
