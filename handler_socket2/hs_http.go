@@ -11,6 +11,14 @@ import (
 	"github.com/slawomir-pryczek/handler_socket2/hscommon"
 )
 
+type HTTPPlugin func(http.ResponseWriter, *http.Request) bool
+
+var HTTPPlugins = make([]HTTPPlugin, 0)
+
+func HTTPPluginRegister(f HTTPPlugin) {
+	HTTPPlugins = append(HTTPPlugins, f)
+}
+
 func startServiceHTTP(bindTo string, handler handlerFunc) {
 
 	fmt.Printf("HTTP Service starting : %s\n", bindTo)
@@ -40,6 +48,27 @@ func startServiceHTTP(bindTo string, handler handlerFunc) {
 		_req_status := &httpRequest{r.URL.RawQuery, time.Now().UnixNano(), 0, "R"}
 		httpRequestStatus[_my_reqid] = _req_status
 		httpStatMutex.Unlock()
+
+		// plugins support, now we can process raw HTTP request
+		for _, plugin := range HTTPPlugins {
+			if plugin(w, r) {
+
+				_end := time.Now().UnixNano()
+				go func(_my_reqid uint64, _end int64) {
+					httpStatMutex.Lock()
+					_req_status.status = "F"
+					_req_status.end_time = _end
+					httpStatMutex.Unlock()
+
+					time.Sleep(5000 * time.Millisecond)
+					httpStatMutex.Lock()
+					delete(httpRequestStatus, _my_reqid)
+					httpStatMutex.Unlock()
+				}(_my_reqid, _end)
+
+				return
+			}
+		}
 
 		hsparams := CreateHSParamsFromMap(params)
 
