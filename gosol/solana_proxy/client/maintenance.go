@@ -9,6 +9,8 @@ func (this *SOLClient) _maintenance() {
 
 	_maint_stat := func(now int64) {
 		this.mu.Lock()
+		this.throttle.OnMaintenance(int(now))
+
 		_p := int(now % 60)
 		this.stat_last_60_pos = _p
 		this.stat_last_60[_p].stat_done = 0
@@ -23,7 +25,7 @@ func (this *SOLClient) _maintenance() {
 		this.stat_last_60[_p].stat_bytes_received = 0
 		this.stat_last_60[_p].stat_bytes_sent = 0
 
-		_d, _requests_done := this._statsIsDead()
+		_d, _requests_done, _ := this._statsIsDead()
 		this.is_disabled = _d
 		if _requests_done < 5 && this.attr&CLIENT_CONSERVE_REQUESTS == 0 {
 			go func() {

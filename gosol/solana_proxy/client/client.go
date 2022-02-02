@@ -1,7 +1,7 @@
 package client
 
 import (
-	"gosol/solana_proxy/throttle"
+	"gosol/solana_proxy/client/throttle"
 	"net/http"
 	"sync"
 	"time"
@@ -26,21 +26,22 @@ type stat struct {
 type SOLClientAttr int
 
 const (
-	CLIENT_NORMAL             SOLClientAttr = 0
-	CLIENT_DISABLE_THROTTLING               = 1 << 1
-	CLIENT_ALT                              = 1 << 2
-	CLIENT_CONSERVE_REQUESTS                = 1 << 3
+	CLIENT_CONSERVE_REQUESTS SOLClientAttr = 1 << 0
 )
+
+func (this *SOLClient) SetAttr(attrs SOLClientAttr) {
+	this.attr = attrs
+}
 
 func (this SOLClientAttr) Display() string {
 
 	ret := ""
-	if this&CLIENT_DISABLE_THROTTLING > 0 {
+	/*if this&CLIENT_DISABLE_THROTTLING > 0 {
 		ret += "✓"
 	} else {
 		ret += "x"
 	}
-	ret += "Throttling "
+	ret += "Throttling "*/
 
 	if this&CLIENT_CONSERVE_REQUESTS > 0 {
 		ret += "✓"
@@ -49,12 +50,6 @@ func (this SOLClientAttr) Display() string {
 	}
 	ret += "Conserve requests "
 
-	if this&CLIENT_ALT > 0 {
-		ret += "✓"
-	} else {
-		ret += "x"
-	}
-	ret += "Alt (low priority)"
 	return ret
 }
 
@@ -77,20 +72,41 @@ type SOLClient struct {
 	mu        sync.Mutex
 	serial_no uint64
 
-	attr SOLClientAttr
+	attr     SOLClientAttr
+	throttle *throttle.Throttle
 }
 
-type solclientinfo struct {
+type Solclientinfo struct {
 	Endpoint              string
 	Is_public_node        bool
 	First_available_block int
 	Is_disabled           bool
+	Is_throttled          bool
 
-	Throttle throttle.Throttle
-	Attr     SOLClientAttr
+	Attr  SOLClientAttr
+	Score int
 }
 
-func MakeClient(endpoint string, is_public_node bool, max_conns int) *SOLClient {
+func (this *SOLClient) GetInfo() *Solclientinfo {
+
+	ret := Solclientinfo{}
+
+	this.mu.Lock()
+	ret.Endpoint = this.endpoint
+	ret.Is_public_node = this.is_public_node
+	ret.First_available_block = this.first_available_block
+	ret.Is_disabled = this.is_disabled
+
+	tmp := this.throttle.GetThrottleScore()
+	ret.Is_throttled = tmp.Disabled
+	ret.Score = tmp.Score
+	ret.Attr = this.attr
+	this.mu.Unlock()
+
+	return &ret
+}
+
+func MakeClient(endpoint string, is_public_node bool, max_conns int, throttle *throttle.Throttle) *SOLClient {
 
 	tr := &http.Transport{
 		MaxIdleConns:       max_conns,
@@ -107,32 +123,7 @@ func MakeClient(endpoint string, is_public_node bool, max_conns int) *SOLClient 
 		ret.stat_last_60[i].stat_request_by_fn = make(map[string]int)
 	}
 
+	ret.throttle = throttle
 	ret._maintenance()
 	return &ret
-}
-
-func (this *SOLClient) SetAttr(attrs SOLClientAttr) {
-	this.attr = attrs
-}
-
-func (this *SOLClient) GetInfo() *solclientinfo {
-
-	ret := solclientinfo{}
-
-	this.mu.Lock()
-	ret.Endpoint = this.endpoint
-	ret.Is_public_node = this.is_public_node
-	ret.First_available_block = this.first_available_block
-	ret.Is_disabled = this.is_disabled
-	_a, _b, _c := this._statsGetThrottle()
-	this.mu.Unlock()
-
-	ret.Throttle = throttle.Make(this.attr&CLIENT_DISABLE_THROTTLING == 0, _a, _b, _c)
-	ret.Attr = this.attr
-	return &ret
-}
-
-func (this *SOLClient) GetThrottle() throttle.Throttle {
-	_a, _b, _c := this._statsGetThrottle()
-	return throttle.Make(this.attr&CLIENT_DISABLE_THROTTLING == 0, _a, _b, _c)
 }

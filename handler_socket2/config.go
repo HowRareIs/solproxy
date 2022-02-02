@@ -100,8 +100,14 @@ func (this *cfg) GetIPDistance(remote_addr string) byte {
 	return 1
 }
 
-func (this *cfg) Get(attr, def string) string {
+func (this *cfg) GetRawData(attr string, def string) interface{} {
+	if val, ok := this.raw_data[attr]; ok {
+		return val
+	}
+	return def
+}
 
+func (this *cfg) Get(attr, def string) string {
 	if val, ok := this.config[attr]; ok {
 		return val
 	}

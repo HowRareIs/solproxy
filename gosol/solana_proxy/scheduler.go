@@ -70,6 +70,7 @@ func (this *scheduler) GetAll(is_public bool, include_disabled bool) []*client.S
 		if info.Is_disabled && include_disabled == false {
 			continue
 		}
+
 		if is_public != info.Is_public_node {
 			continue
 		}

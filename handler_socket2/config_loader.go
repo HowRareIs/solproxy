@@ -1,6 +1,7 @@
 package handler_socket2
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -34,6 +35,8 @@ type cfg struct {
 	cfg_file_path     string
 	cfg_file_size     int64
 	cfg_file_modified int64
+
+	raw_data map[string]interface{}
 }
 
 // Load config from json file
@@ -59,10 +62,12 @@ func _cfg_load_config() (*cfg, error) {
 	ret.cfg_file_modified = st.ModTime().Unix()
 
 	var cfg_tmp map[string]interface{}
-	json.Unmarshal(data, &cfg_tmp)
+
+	d := json.NewDecoder(bytes.NewReader(data))
+	d.UseNumber()
+	d.Decode(&cfg_tmp)
 
 	ret.config = make(map[string]string)
-
 	for k, v := range cfg_tmp {
 
 		switch v.(type) {
@@ -72,6 +77,8 @@ func _cfg_load_config() (*cfg, error) {
 			ret.config[k] = strconv.Itoa(v.(int))
 		case float64:
 			ret.config[k] = strconv.FormatFloat(v.(float64), 'f', 3, 64)
+		case json.Number:
+			ret.config[k] = v.(json.Number).String()
 		case bool:
 			if v.(bool) {
 				ret.config[k] = "1"
@@ -79,7 +86,6 @@ func _cfg_load_config() (*cfg, error) {
 				ret.config[k] = "0"
 			}
 		}
-
 	}
 
 	ret.compression_threshold = DEFAULT_COMPRESSION_THRESHOLD
@@ -91,6 +97,7 @@ func _cfg_load_config() (*cfg, error) {
 	cfg_verbose = ret.config["VERBOSE"] == "1"
 
 	fmt.Println("Config: ", ret.config)
+	ret.raw_data = cfg_tmp
 	return &ret, nil
 }
 

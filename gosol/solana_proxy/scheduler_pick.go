@@ -29,16 +29,7 @@ func (this *scheduler) _pick_next() *client.SOLClient {
 			continue
 		}
 
-		// if the node is public it'll have limits, so get public node at the end!
-		_r := int(info.Throttle.GetUsedCapacity() * 10)
-		if info.Is_public_node {
-			_r += 5000000
-		}
-		// this node is alternative, use it as last resort only
-		if info.Attr&client.CLIENT_ALT > 0 {
-			_r += 5000000000
-		}
-
+		_r := info.Score
 		if min == -1 || _r < min {
 			min = _r
 			min_pos = num

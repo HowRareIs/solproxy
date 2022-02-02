@@ -8,8 +8,10 @@
 "VERBOSE":false,
 "RUN_SERVICES":"*",
 
+"SOL_NODES":[{"url":"http://162.55.91.243:8899", "public":true,
+	"score_modifier":-9000, "throttle":"r,30,90;f,3,50;d,200000,5"}],
 
-"#SOL_NODE_PRIV":"http://162.55.91.243:8899",
-"#SOL_NODE_PUB":"http://www.cointaxes.io/solana_proxy.php,http://adsbackend.com/bsc9182/solana_proxy.php,http://api.mainnet-beta.solana.com",
+"SOL_NODE_PRIV":"http://162.55.91.243:8899",
+"SOL_NODE_PUB":"http://www.cointaxes.io/solana_proxy.php,http://adsbackend.com/bsc9182/solana_proxy.php,http://api.mainnet-beta.solana.com",
 "SOL_NODE_ALT_PUB":"https://wandering-purple-sun.solana-mainnet.quiknode.pro/d5ae870b21180fe58071a66990be9824b3d7002f/"
 }

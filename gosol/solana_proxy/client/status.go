@@ -2,8 +2,6 @@ package client
 
 import (
 	"fmt"
-	"gosol/solana_proxy/throttle"
-	"strings"
 	"time"
 
 	"github.com/slawomir-pryczek/handler_socket2/hscommon"
@@ -18,7 +16,6 @@ func init() {
 func (this *SOLClient) GetStatus() string {
 
 	_get_row := func(label string, s stat, time_running int, _addl ...string) []string {
-
 		_req := fmt.Sprintf("%d", s.stat_done)
 		_req_s := fmt.Sprintf("%.02f", float64(s.stat_done)/float64(time_running))
 		_req_avg := fmt.Sprintf("%.02f ms", (float64(s.stat_ns_total)/float64(s.stat_done))/1000.0)
@@ -43,49 +40,61 @@ func (this *SOLClient) GetStatus() string {
 	this.mu.Lock()
 	defer this.mu.Unlock()
 
+	// Node type
 	status := ""
-	_a, _b, _c := this._statsGetThrottle()
-	thr := throttle.Make(this.attr&CLIENT_DISABLE_THROTTLING == 0, _a, _b, _c)
-
 	_t := "Private"
 	if this.is_public_node {
 		_t = "Public"
 	}
 
-	_tmp := thr.GetThrottledStatus()
-	color := "#44aa44"
-	if _tmp["is_throttled"].(bool) {
-		color = "#aa4444"
-	}
+	// Node Health
+	/*node_health := hscommon.StrMessage(  "<span style='color: #449944; font-family: monospace'> <b>⬤</b> Node is healthy and can process requests</span>\n"
+	if this.is_disabled {
+		node_health = "<span style='color: #dd4444; font-family: monospace'> <b>⮿</b> Node is not healthy, recent requests failed, it is removed from the pool</span>"
+	}*/
 
-	node_stats := "<b style='background: #FF7777!important'>Broken / Disabled!</b>"
-	if !this.is_disabled {
-		node_stats = "<b style='background: #77FF77!important'>Running</b>"
+	node_health := ""
+	if this.is_disabled {
+		node_health = hscommon.StrMessage("Node is not healthy, recent requests failed", false)
+	} else {
+		node_health = hscommon.StrMessage("Node is healthy and can process requests", true)
 	}
+	node_stats := hscommon.StrPostfixHTML(node_health, 81, " ")
 
-	__t, __t2 := this._statsIsDead()
-	node_stats = fmt.Sprintf("Node status: %s, Based on current stats (%d seconds) next alive status is: <b>%v</b> (using %d requests)<br>",
+	__t, __t2, _ := this._statsIsDead()
+	node_stats = fmt.Sprintf("%s, Based on current stats (%d seconds) next alive status is: <b>%v</b> (using %d requests)<br>",
 		node_stats, probe_isalive_seconds, !__t, __t2)
 
-	throttle_stats := fmt.Sprintf("Throttle settings: <b style='color:%s'>%s</b>\n", color, _tmp["throttled_comment"])
+	node_stats += this.throttle.GetStatus()
+	node_stats_raw := this.throttle.GetThrottleScore()
+
+	/*TODO throttle_stats := fmt.Sprintf("Throttle settings: <b style='color:%s'>%s</b>\n", color, _tmp["throttled_comment"])
 	for k, v := range _tmp {
 		if strings.Index(k, "throttle_") == -1 {
 			continue
 		}
 		throttle_stats += fmt.Sprintf("<b>%s</b>: %s\n", k, v)
-	}
+	}*/
 
 	table := hscommon.NewTableGen("Time", "Requests", "Req/s", "Avg Time", "First Block",
 		"Err JM", "Err Req", "Err Resp", "Err RResp", "Err Decode", "Sent", "Received")
 	table.SetClass("tab sol")
 
 	status += "\n"
-	status += _t + " Node Endpoint: " + this.endpoint + " <i>v" + this.version + "</i>"
+	status += "<b>" + _t + " Node Endpoint</b> " + this.endpoint + " <i>v" + this.version + "</i>"
 	status += fmt.Sprintf(" ... Requests running now: %d ", this.stat_running)
-	status += fmt.Sprintf("Utilization: %.02f%%\n", thr.GetUsedCapacity())
+
+	status += "Utilization: "
+	util := fmt.Sprintf("%.02f%%", float64(node_stats_raw.CapacityUsed)/100.0)
+	if node_stats_raw.CapacityUsed == 10000 {
+		util = "<b style='color: #dd4444'>" + util + "</b>"
+	} else {
+		util = "<b style='color: #449944'>" + util + "</b>"
+	}
+	status += util + "\n"
 
 	status += node_stats
-	status += throttle_stats
+	//status += throttle_stats
 	status += this.attr.Display()
 
 	table.AddRow(_get_row("Last 10s", this._statsGetAggr(10), 10, "-")...)

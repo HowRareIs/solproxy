@@ -24,7 +24,7 @@ func (this *Handle_solana_info) GetActions() []string {
 
 func (this *Handle_solana_info) HandleAction(action string, data *handler_socket2.HSParams) string {
 
-	_round := func(n float64) float64 {
+	/*_round := func(n float64) float64 {
 		tmp := int(n * 1000.0)
 		return float64(tmp/100) / 10.0
 	}
@@ -77,7 +77,7 @@ func (this *Handle_solana_info) HandleAction(action string, data *handler_socket
 		_tmp, _ := json.Marshal(ret)
 		data.FastReturnBNocopy(_tmp)
 		return ""
-	}
+	}*/
 
 	if action == "getFirstAvailableBlock" {
 

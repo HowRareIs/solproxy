@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"encoding/json"
-	"gosol/solana_proxy/throttle"
 )
 
 const FORWARD_OK = 0
@@ -30,13 +29,14 @@ func (this *SOLClient) RequestForward(body []byte) (int, []byte) {
 	}
 
 	this.mu.Lock()
-	// throttling is not disabled
-	_a, _b, _c := this._statsGetThrottle()
-	is_throttled, _ := throttle.Make(this.attr&CLIENT_DISABLE_THROTTLING == 0, _a, _b, _c).IsThrottled()
-	if is_throttled != nil {
+
+	// THROTTLE BLOCK! Check if we're not throttled
+	if this.throttle.GetThrottleScore().Disabled {
 		this.mu.Unlock()
 		return FORWARD_THROTTLE, nil
 	}
+	this.throttle.OnRequest(method)
+	// <<
 
 	this.stat_total.stat_done++
 	this.stat_last_60[this.stat_last_60_pos].stat_done++
@@ -69,14 +69,12 @@ func (this *SOLClient) RequestBasic(method_param ...string) []byte {
 	}
 
 	this.mu.Lock()
-
-	// throttling is not disabled
-	_a, _b, _c := this._statsGetThrottle()
-	is_throttled, _ := throttle.Make(this.attr&CLIENT_DISABLE_THROTTLING == 0, _a, _b, _c).IsThrottled()
-	if is_throttled != nil {
+	// THROTTLE BLOCK! Check if we're not throttled
+	if this.throttle.GetThrottleScore().Disabled {
 		this.mu.Unlock()
-		return is_throttled
+		return []byte("Throttled")
 	}
+	this.throttle.OnRequest(method)
 
 	this.stat_total.stat_done++
 	this.stat_last_60[this.stat_last_60_pos].stat_done++
