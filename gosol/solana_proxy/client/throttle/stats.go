@@ -123,6 +123,7 @@ func (this *Throttle) _getThrottleScore() ThrottleScore {
 				pos = len(this.stats) - 1
 			}
 		}
+		score += this.score_modifier
 		return ThrottleScore{score, false, 0}
 	}
 

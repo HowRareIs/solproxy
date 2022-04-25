@@ -53,7 +53,7 @@ func init() {
 		}
 
 		sch := solana_proxy.MakeScheduler()
-		clients := sch.GetAll(true, false)
+		clients := sch.GetAllSorted(true, false)
 		if len(clients) == 0 {
 			w.Write(_passthrough_err("Can't find any client"))
 			return true

@@ -100,6 +100,16 @@ func (this *SOLClient) GetTransaction(hash string) ([]byte, ResponseType) {
 		return ret, r_type
 	}
 
+	// genesys patch, redo transaction if it fails for given transaction id
+	if len(ret) < 200 &&
+		bytes.Index(ret, ([]byte)("\"result\":null")) > -1 &&
+		strings.Index(this.endpoint, "genesysgo") > -1 {
+		ret, r_type = this.RequestBasic("getTransaction", params)
+		if ret == nil {
+			return ret, r_type
+		}
+	}
+
 	v := make(map[string]interface{})
 	dec := json.NewDecoder(bytes.NewReader(ret))
 	dec.UseNumber()

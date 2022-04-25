@@ -1,7 +1,9 @@
 package solana_proxy
 
 import (
+	"fmt"
 	"gosol/solana_proxy/client"
+	"sort"
 )
 
 type scheduler struct {
@@ -79,5 +81,26 @@ func (this *scheduler) GetAll(is_public bool, include_disabled bool) []*client.S
 		}
 		ret = append(ret, v)
 	}
+	return ret
+}
+
+func (this *scheduler) GetAllSorted(is_public bool, include_disabled bool) []*client.SOLClient {
+
+	ret := this.GetAll(is_public, include_disabled)
+	type r_sort struct {
+		c     *client.SOLClient
+		score int
+	}
+	s := make([]r_sort, 0, len(ret))
+	for _, v := range ret {
+		s = append(s, r_sort{v, v.GetInfo().Score})
+	}
+	sort.Slice(s, func(a, b int) bool {
+		return s[a].score < s[b].score
+	})
+	for k, v := range s {
+		ret[k] = v.c
+	}
+
 	return ret
 }

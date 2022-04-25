@@ -130,9 +130,9 @@ func _read_node_config() {
 			}
 		} else {
 			if public {
-				thr.AddLimiter(throttle.L_REQUESTS, 90, 12)
-				thr.AddLimiter(throttle.L_REQUESTS_PER_FN, 33, 12)
-				thr.AddLimiter(throttle.L_DATA_RECEIVED, 95*1000*1000, 32)
+				thr.AddLimiter(throttle.L_REQUESTS, 70, 10)
+				thr.AddLimiter(throttle.L_REQUESTS_PER_FN, 20, 10)
+				thr.AddLimiter(throttle.L_DATA_RECEIVED, 75*1000*1000, 30)
 				fmt.Println(" Adding standard throttle for public nodes")
 			}
 		}

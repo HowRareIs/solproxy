@@ -16,6 +16,7 @@ const (
 	R_OK        ResponseType = 0
 	R_ERROR                  = 1
 	R_THROTTLED              = 2
+	R_REDO                   = 50
 )
 
 const FORWARD_OK = 0
