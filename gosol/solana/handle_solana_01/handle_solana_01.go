@@ -2,6 +2,7 @@ package handle_solana_01
 
 import (
 	"gosol/solana_proxy"
+	"gosol/solana_proxy/client"
 
 	"github.com/slawomir-pryczek/handler_socket2"
 )
@@ -29,8 +30,8 @@ func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.
 	if data.GetParamI("private", 0) == 1 {
 		sch.ForcePrivate(true)
 	}
-	client := sch.GetAnyClient()
-	if client == nil {
+	cl := sch.GetAnyClient()
+	if cl == nil {
 		return `{"error":"can't find appropriate client"}`
 	}
 
@@ -39,14 +40,18 @@ func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.
 		if block_no == -1 {
 			return `{"error":"provide block number as &block=123"}`
 		}
-
 		sch.SetMinBlock(block_no)
-		ret, is_ok := client.GetBlock(block_no)
-		if !is_ok {
-			client := sch.GetPublicClient()
-			if client != nil {
-				ret, _ = client.GetBlock(block_no)
+		ret, result := cl.GetBlock(block_no)
+
+		for result != client.R_OK {
+			cl = sch.GetPublicClient()
+			if cl == nil {
+				cl = sch.GetAnyClient()
 			}
+			if cl == nil {
+				break
+			}
+			ret, result = cl.GetBlock(block_no)
 		}
 		data.FastReturnBNocopy(ret)
 		return ""
@@ -58,13 +63,19 @@ func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.
 			return `{"error":"provide transaction &hash=123"}`
 		}
 
-		ret, is_ok := client.GetTransaction(hash)
-		if !is_ok {
-			client = sch.GetPublicClient()
-			if client != nil {
-				ret, _ = client.GetTransaction(hash)
+		ret, result := cl.GetTransaction(hash)
+		for result != client.R_OK {
+			cl = sch.GetPublicClient()
+			if cl == nil {
+				cl = sch.GetAnyClient()
 			}
+			if cl == nil {
+				break
+			}
+
+			ret, result = cl.GetTransaction(hash)
 		}
+
 		data.FastReturnBNocopy(ret)
 		return ""
 	}
@@ -76,12 +87,16 @@ func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.
 		}
 		commitment := data.GetParam("commitment", "")
 
-		ret, is_ok := client.SimpleCall(action, pubkey, commitment)
-		if !is_ok {
-			client = sch.GetPublicClient()
-			if client != nil {
-				ret, _ = client.SimpleCall(action, pubkey, commitment)
+		ret, result := cl.SimpleCall(action, pubkey, commitment)
+		for result != client.R_OK {
+			cl = sch.GetPublicClient()
+			if cl == nil {
+				cl = sch.GetAnyClient()
 			}
+			if cl == nil {
+				break
+			}
+			ret, result = cl.SimpleCall(action, pubkey, commitment)
 		}
 		data.FastReturnBNocopy(ret)
 		return ""

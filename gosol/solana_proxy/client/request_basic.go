@@ -10,18 +10,26 @@ import (
 	"encoding/json"
 )
 
+type ResponseType uint8
+
+const (
+	R_OK        ResponseType = 0
+	R_ERROR                  = 1
+	R_THROTTLED              = 2
+)
+
 const FORWARD_OK = 0
 const FORWARD_ERROR = 1
 const FORWARD_THROTTLE = 10
 
-func (this *SOLClient) RequestForward(body []byte) (int, []byte) {
+func (this *SOLClient) RequestForward(body []byte) (ResponseType, []byte) {
 
 	type method_def struct {
 		Method string `json:"method"`
 	}
 	tmp := &method_def{}
 	if json.Unmarshal(body, tmp) != nil {
-		return FORWARD_ERROR, []byte("{\"error\":\"json unmarshall error\"}")
+		return R_ERROR, []byte("{\"error\":\"json unmarshall error\"}")
 	}
 	method := tmp.Method
 	if len(method) == 0 {
@@ -33,7 +41,7 @@ func (this *SOLClient) RequestForward(body []byte) (int, []byte) {
 	// THROTTLE BLOCK! Check if we're not throttled
 	if this.throttle.GetThrottleScore().Disabled {
 		this.mu.Unlock()
-		return FORWARD_THROTTLE, nil
+		return R_THROTTLED, nil
 	}
 	this.throttle.OnRequest(method)
 	// <<
@@ -51,12 +59,12 @@ func (this *SOLClient) RequestForward(body []byte) (int, []byte) {
 	now := time.Now().UnixNano()
 	resp_body := this._docall(now, body)
 	if resp_body == nil {
-		return FORWARD_ERROR, []byte("{\"error\":\"nil response from docall\"}")
+		return R_ERROR, []byte("{\"error\":\"nil response from docall\"}")
 	}
-	return FORWARD_OK, resp_body
+	return R_OK, resp_body
 }
 
-func (this *SOLClient) RequestBasic(method_param ...string) []byte {
+func (this *SOLClient) RequestBasic(method_param ...string) ([]byte, ResponseType) {
 
 	//	## Prepare parameters, check if the node is running
 	method := method_param[0]
@@ -72,7 +80,7 @@ func (this *SOLClient) RequestBasic(method_param ...string) []byte {
 	// THROTTLE BLOCK! Check if we're not throttled
 	if this.throttle.GetThrottleScore().Disabled {
 		this.mu.Unlock()
-		return []byte("Throttled")
+		return nil, R_THROTTLED
 	}
 	this.throttle.OnRequest(method)
 
@@ -105,7 +113,7 @@ func (this *SOLClient) RequestBasic(method_param ...string) []byte {
 		this.stat_total.stat_error_json_marshal++
 		this.stat_running--
 		this.mu.Unlock()
-		return nil
+		return nil, R_ERROR
 	}
 
 	if len(params) > 0 {
@@ -118,15 +126,14 @@ func (this *SOLClient) RequestBasic(method_param ...string) []byte {
 	resp_body := this._docall(now, post)
 	if !bytes.Contains(resp_body, []byte(serial)) {
 
-		fmt.Println(">EROR IN RESPONSE>", string(resp_body))
-
+		fmt.Println(">ERROR IN RESPONSE>", string(resp_body))
 		this.mu.Lock()
 		this.stat_total.stat_error_resp++
 		this.stat_last_60[this.stat_last_60_pos].stat_error_resp++
 		this.mu.Unlock()
-		return nil
+		return nil, R_ERROR
 	}
-	return resp_body
+	return resp_body, R_OK
 }
 
 func (this *SOLClient) _docall(ts_started int64, post []byte) []byte {
@@ -178,6 +185,7 @@ func (this *SOLClient) _docall(ts_started int64, post []byte) []byte {
 	this.stat_total.stat_bytes_sent += len(post)
 	this.stat_last_60[this.stat_last_60_pos].stat_bytes_sent += len(post)
 	this.stat_running--
+	this.throttle.OnReceive(len(resp_body))
 	this.mu.Unlock()
 	return resp_body
 }

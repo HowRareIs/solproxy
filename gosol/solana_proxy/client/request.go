@@ -9,11 +9,11 @@ import (
 	"strings"
 )
 
-func (this *SOLClient) GetFirstAvailableBlock() (int, bool) {
+func (this *SOLClient) GetFirstAvailableBlock() (int, ResponseType) {
 
-	ret := this.RequestBasic("getFirstAvailableBlock")
+	ret, r_type := this.RequestBasic("getFirstAvailableBlock")
 	if ret == nil {
-		return 0, false
+		return 0, r_type
 	}
 
 	r := make(map[string]interface{})
@@ -27,18 +27,18 @@ func (this *SOLClient) GetFirstAvailableBlock() (int, bool) {
 		if err != nil {
 			break
 		}
-		return int(_ret), true
+		return int(_ret), r_type
 	default:
 		fmt.Println("Error in response for getFirstAvailableBlock: " + string(ret))
 	}
-	return 0, false
+	return 0, R_ERROR
 }
 
-func (this *SOLClient) GetVersion() (int, int, string, bool) {
+func (this *SOLClient) GetVersion() (int, int, string, ResponseType) {
 
-	ret := this.RequestBasic("getVersion")
+	ret, r_type := this.RequestBasic("getVersion")
 	if ret == nil {
-		return 0, 0, "", false
+		return 0, 0, "", r_type
 	}
 
 	type out_result struct {
@@ -53,25 +53,26 @@ func (this *SOLClient) GetVersion() (int, int, string, bool) {
 	json.Unmarshal(ret, tmp)
 
 	if len(tmp.Result.Solana_core) == 0 {
-		return 0, 0, "", false
+		fmt.Println("Error in response for GetVersion: can't find solana core")
+		return 0, 0, "", R_ERROR
 	}
 
 	tmp_chunks := strings.Split(tmp.Result.Solana_core, ".")
 	version_major, _ := strconv.Atoi(tmp_chunks[0])
 	version_minor, _ := strconv.Atoi(tmp_chunks[1])
-	return version_major, version_minor, tmp.Result.Solana_core, true
+	return version_major, version_minor, tmp.Result.Solana_core, R_OK
 }
 
-func (this *SOLClient) GetBlock(block int) ([]byte, bool) {
+func (this *SOLClient) GetBlock(block int) ([]byte, ResponseType) {
 	ret := []byte("")
+	r_type := ResponseType(R_OK)
 	if this.version_major == 1 && this.version_minor <= 6 {
-		ret = this.RequestBasic("getConfirmedBlock", fmt.Sprintf("[%d]", block))
+		ret, r_type = this.RequestBasic("getConfirmedBlock", fmt.Sprintf("[%d]", block))
 	} else {
-		ret = this.RequestBasic("getBlock", fmt.Sprintf("[%d]", block))
+		ret, r_type = this.RequestBasic("getBlock", fmt.Sprintf("[%d]", block))
 	}
-
 	if ret == nil {
-		return []byte(`{"error":"No response from server 0x01"}`), false
+		return ret, r_type
 	}
 
 	v := make(map[string]interface{})
@@ -81,22 +82,22 @@ func (this *SOLClient) GetBlock(block int) ([]byte, bool) {
 
 	switch v["result"].(type) {
 	case nil:
-		return ret, false
+		return ret, R_ERROR
 	}
-	return ret, true
+	return ret, R_OK
 }
 
-func (this *SOLClient) GetTransaction(hash string) ([]byte, bool) {
+func (this *SOLClient) GetTransaction(hash string) ([]byte, ResponseType) {
 	params := fmt.Sprintf("[\"%s\"]", hash)
 	ret := []byte("")
+	r_type := ResponseType(R_OK)
 	if this.version_major == 1 && this.version_minor <= 6 {
-		ret = this.RequestBasic("getConfirmedTransaction", params)
+		ret, r_type = this.RequestBasic("getConfirmedTransaction", params)
 	} else {
-		ret = this.RequestBasic("getTransaction", params)
+		ret, r_type = this.RequestBasic("getTransaction", params)
 	}
-
 	if ret == nil {
-		return []byte(`{"error":"No response from server 0x01"}`), false
+		return ret, r_type
 	}
 
 	v := make(map[string]interface{})
@@ -106,12 +107,12 @@ func (this *SOLClient) GetTransaction(hash string) ([]byte, bool) {
 
 	switch v["result"].(type) {
 	case nil:
-		return ret, false
+		return ret, R_ERROR
 	}
-	return ret, true
+	return ret, R_OK
 }
 
-func (this *SOLClient) SimpleCall(method, pubkey string, commitment string) ([]byte, bool) {
+func (this *SOLClient) SimpleCall(method, pubkey string, commitment string) ([]byte, ResponseType) {
 	params := ""
 	if len(commitment) > 0 {
 		params = fmt.Sprintf("[\"%s\",\"%s\"]", pubkey, commitment)
@@ -119,17 +120,13 @@ func (this *SOLClient) SimpleCall(method, pubkey string, commitment string) ([]b
 		params = fmt.Sprintf("[\"%s\"]", pubkey)
 	}
 
-	ret := this.RequestBasic(method, params)
-	if ret == nil {
-		return []byte(`{"error":"No response from server 0x01"}`), false
-	}
-	return ret, true
+	return this.RequestBasic(method, params)
 }
 
-func (this *SOLClient) GetBalance(pubkey string, commitment string) ([]byte, bool) {
+func (this *SOLClient) GetBalance(pubkey string, commitment string) ([]byte, ResponseType) {
 	return this.SimpleCall("getBalance", pubkey, commitment)
 }
 
-func (this *SOLClient) GetTokenSupply(pubkey string, commitment string) ([]byte, bool) {
+func (this *SOLClient) GetTokenSupply(pubkey string, commitment string) ([]byte, ResponseType) {
 	return this.SimpleCall("getTokenSupply", pubkey, commitment)
 }

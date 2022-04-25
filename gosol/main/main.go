@@ -34,10 +34,6 @@ func _read_node_config() {
 		solana_proxy.RegisterClient(endpoint, public, max_conn, throttle)
 	}
 
-	type cfg_node struct {
-		x []map[string]interface{}
-	}
-
 	fmt.Println("\nReading node config...")
 	nodes := (handler_socket2.Config().GetRawData("SOL_NODES", "")).([]interface{})
 	if len(nodes) <= 0 {
@@ -135,8 +131,8 @@ func _read_node_config() {
 		} else {
 			if public {
 				thr.AddLimiter(throttle.L_REQUESTS, 90, 12)
-				thr.AddLimiter(throttle.L_REQUESTS_PER_FN, 12, 33)
-				thr.AddLimiter(throttle.L_REQUESTS_PER_FN, 95*1000*1000, 32)
+				thr.AddLimiter(throttle.L_REQUESTS_PER_FN, 33, 12)
+				thr.AddLimiter(throttle.L_DATA_RECEIVED, 95*1000*1000, 32)
 				fmt.Println(" Adding standard throttle for public nodes")
 			}
 		}

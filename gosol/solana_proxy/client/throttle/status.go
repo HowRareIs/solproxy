@@ -65,11 +65,51 @@ func (this *Throttle) GetStatus() string {
 	}
 
 	_sc := fmt.Sprintf(" Node Score (lowest is better) = %d", this.status_score)
-	_adj := fmt.Sprintf("<span style='color: gray; font-family: monospace'>(Score modifier is %s)</span>\n", adj)
+	_adj := fmt.Sprintf("<span style='color: gray; font-family: monospace'>Score modifier is %s</span>\n", adj)
 	if len(_sc) < 80 {
 		_adj = strings.Repeat(" ", 80-len(_sc)) + _adj
 	}
 	status += _sc + _adj
 
 	return "<pre>" + status + "</pre>"
+}
+
+func (this *Throttle) GetLimitsLeft() (int, int, int, int) {
+	tmp := this.GetThrottleScore()
+	if tmp.Disabled {
+		return 0, 0, 0, 10000
+	}
+
+	capacity_used := 0
+	left_reqs := 1024 * 1024 * 1024
+	left_reqs_fn := 1024 * 1024 * 1024
+	left_data_rec := 1024 * 1024 * 1024
+
+	for k, _ := range this.limiters {
+		v := &this.limiters[k]
+		amt_used, cap_used := this._getThrottleStatus(v)
+		amt_left := v.maximum - amt_used
+		if amt_left < 0 {
+			amt_left = 0
+		}
+
+		if v.t == L_REQUESTS && amt_left < left_reqs {
+			left_reqs = amt_left
+		}
+		if v.t == L_REQUESTS_PER_FN && amt_left < left_reqs_fn {
+			left_reqs_fn = amt_left
+		}
+		if v.t == L_DATA_RECEIVED && amt_left < left_data_rec {
+			left_data_rec = amt_left
+		}
+		if cap_used > capacity_used {
+			capacity_used = cap_used
+		}
+	}
+
+	if capacity_used > 10000 {
+		capacity_used = 10000
+	}
+
+	return left_reqs, left_reqs_fn, left_data_rec, capacity_used
 }

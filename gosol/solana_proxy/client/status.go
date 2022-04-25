@@ -47,56 +47,66 @@ func (this *SOLClient) GetStatus() string {
 		_t = "Public"
 	}
 
-	// Node Health
-	/*node_health := hscommon.StrMessage(  "<span style='color: #449944; font-family: monospace'> <b>⬤</b> Node is healthy and can process requests</span>\n"
-	if this.is_disabled {
-		node_health = "<span style='color: #dd4444; font-family: monospace'> <b>⮿</b> Node is not healthy, recent requests failed, it is removed from the pool</span>"
-	}*/
-
-	node_health := ""
-	if this.is_disabled {
-		node_health = hscommon.StrMessage("Node is not healthy, recent requests failed", false)
-	} else {
-		node_health = hscommon.StrMessage("Node is healthy and can process requests", true)
+	// Health status
+	node_stats := ""
+	{
+		node_health := ""
+		if this.is_disabled {
+			node_health = hscommon.StrMessage("Node is not healthy, recent requests failed", false)
+		} else {
+			node_health = hscommon.StrMessage("Node is healthy and can process requests", true)
+		}
+		node_health = hscommon.StrPostfixHTML(node_health, 80, " ")
+		node_health += fmt.Sprintf("%d second(s) probing time\n", probe_isalive_seconds)
+		node_stats += node_health
 	}
-	node_stats := hscommon.StrPostfixHTML(node_health, 81, " ")
 
-	__t, __t2, _ := this._statsIsDead()
-	node_stats = fmt.Sprintf("%s, Based on current stats (%d seconds) next alive status is: <b>%v</b> (using %d requests)<br>",
-		node_stats, probe_isalive_seconds, !__t, __t2)
+	// Future status
+	{
+		future_status := ""
+		_dead, _, _comment := this._statsIsDead()
+		if _dead {
+			future_status = fmt.Sprintf("New health status will be: Not Healthy ")
+		} else {
+			future_status = fmt.Sprintf("New health status is: Healthy ")
+		}
+		future_status = hscommon.StrMessage(future_status, !_dead)
+		future_status = hscommon.StrPostfixHTML(future_status, 80, " ")
+		future_status += _comment
+		node_stats += future_status
+	}
 
+	// Throttle status
 	node_stats += this.throttle.GetStatus()
 	node_stats_raw := this.throttle.GetThrottleScore()
-
-	/*TODO throttle_stats := fmt.Sprintf("Throttle settings: <b style='color:%s'>%s</b>\n", color, _tmp["throttled_comment"])
-	for k, v := range _tmp {
-		if strings.Index(k, "throttle_") == -1 {
-			continue
-		}
-		throttle_stats += fmt.Sprintf("<b>%s</b>: %s\n", k, v)
-	}*/
-
-	table := hscommon.NewTableGen("Time", "Requests", "Req/s", "Avg Time", "First Block",
-		"Err JM", "Err Req", "Err Resp", "Err RResp", "Err Decode", "Sent", "Received")
-	table.SetClass("tab sol")
 
 	status += "\n"
 	status += "<b>" + _t + " Node Endpoint</b> " + this.endpoint + " <i>v" + this.version + "</i>"
 	status += fmt.Sprintf(" ... Requests running now: %d ", this.stat_running)
 
-	status += "Utilization: "
-	util := fmt.Sprintf("%.02f%%", float64(node_stats_raw.CapacityUsed)/100.0)
-	if node_stats_raw.CapacityUsed == 10000 {
-		util = "<b style='color: #dd4444'>" + util + "</b>"
-	} else {
-		util = "<b style='color: #449944'>" + util + "</b>"
+	// Utilization + conserve requests
+	{
+		status += "Utilization: "
+		util := fmt.Sprintf("%.02f%%", float64(node_stats_raw.CapacityUsed)/100.0)
+		if node_stats_raw.CapacityUsed == 10000 {
+			util = "<b style='color: #dd4444'>" + util + "</b>"
+		} else {
+			util = "<b style='color: #449944'>" + util + "</b>"
+		}
+
+		conserve_requests := ""
+		if this.attr&CLIENT_CONSERVE_REQUESTS > 0 {
+			conserve_requests = "<span class='tooltip' style='color: #8B4513'> (?)Conserve Requests <div>Health checks are limited for\nthis node to conserve requests.\n\nIf you're paying per-request it's good\nto enable this mode</div></span>"
+		}
+		status += util + conserve_requests + "\n"
 	}
-	status += util + "\n"
 
 	status += node_stats
-	//status += throttle_stats
-	status += this.attr.Display()
 
+	// Statistics
+	table := hscommon.NewTableGen("Time", "Requests", "Req/s", "Avg Time", "First Block",
+		"Err JM", "Err Req", "Err Resp", "Err RResp", "Err Decode", "Sent", "Received")
+	table.SetClass("tab sol")
 	table.AddRow(_get_row("Last 10s", this._statsGetAggr(10), 10, "-")...)
 	table.AddRow(_get_row("Last 60s", this._statsGetAggr(59), 59, "-")...)
 

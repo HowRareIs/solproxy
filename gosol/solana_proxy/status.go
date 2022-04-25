@@ -1,8 +1,6 @@
 package solana_proxy
 
 import (
-	"fmt"
-
 	"github.com/slawomir-pryczek/handler_socket2"
 )
 
@@ -20,11 +18,9 @@ func init() {
 		status := ""
 		sh := MakeScheduler()
 		for _, v := range sh.GetAll(true, true) {
-			fmt.Println("%%")
 			status += v.GetStatus()
 		}
 		for _, v := range sh.GetAll(false, true) {
-			fmt.Println("**")
 			status += v.GetStatus()
 		}
 

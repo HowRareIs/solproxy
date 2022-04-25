@@ -3,8 +3,8 @@ package handle_solana_raw
 import (
 	"bytes"
 	"encoding/json"
-
 	"gosol/solana_proxy"
+	"gosol/solana_proxy/client"
 
 	"github.com/slawomir-pryczek/handler_socket2"
 )
@@ -33,8 +33,8 @@ func (this *Handle_solana_raw) HandleAction(action string, data *handler_socket2
 	if data.GetParamI("private", 0) == 1 {
 		sch.ForcePrivate(true)
 	}
-	client := sch.GetAnyClient()
-	if client == nil {
+	cl := sch.GetAnyClient()
+	if cl == nil {
 		return `{"error":"can't find appropriate client"}`
 	}
 
@@ -59,22 +59,39 @@ func (this *Handle_solana_raw) HandleAction(action string, data *handler_socket2
 	}
 
 	// Try first client (private by default)
-	ret := client.RequestBasic(method, params)
-	if ret != nil && is_req_ok(ret) {
+	ret, result := cl.RequestBasic(method, params)
+	if ret != nil && result == client.R_OK && is_req_ok(ret) {
 		data.FastReturnBNocopy(ret)
 		return ""
 	}
 
-	// #######
 	// Try public client, if private failed
-	client = sch.GetPublicClient()
-	if client != nil {
-		ret = client.RequestBasic(method, params)
-		if ret != nil {
-			data.FastReturnBNocopy(ret)
-			return ""
-		}
+	cl = sch.GetPublicClient()
+	if cl != nil {
+		ret, result = cl.RequestBasic(method, params)
+	}
+	if ret != nil && result == client.R_OK && is_req_ok(ret) {
+		data.FastReturnBNocopy(ret)
+		return ""
 	}
 
+	// last result, try anything which is not throttled!
+	for result == client.R_THROTTLED {
+		cl = sch.GetAnyClient()
+		if cl == nil {
+			break
+		}
+		ret, result = cl.RequestBasic(method, params)
+	}
+	if ret != nil && result == client.R_OK && is_req_ok(ret) {
+		data.FastReturnBNocopy(ret)
+		return ""
+	}
+
+	// return error, if we were not able to process the request correctly
+	if ret != nil {
+		data.FastReturnBNocopy(ret)
+		return ""
+	}
 	return `{"error":"unknown issue"}`
 }

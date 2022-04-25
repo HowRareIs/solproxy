@@ -8,8 +8,18 @@
 "VERBOSE":false,
 "RUN_SERVICES":"*",
 
-"SOL_NODES":[{"url":"http://162.55.91.243:8899", "public":true,
-	"score_modifier":-9000, "throttle":"r,30,90;f,3,50;d,200000,5"}],
+"XSOL_NODES":[{"url":"http://162.55.91.243:8899", "public":true,
+	"score_modifier":-9000, "throttle":"r,30,90;f,3,50;d,200000,5"},
+	{"url":"http://162.55.91.243:8899", "public":true,
+	"score_modifier":0},
+	{"url":"http://162.55.91.243:8899", "public":true,
+	"score_modifier":0, "throttle":[]}],
+
+"SOL_NODES":[{"url":"http://www.cointaxes.io/solana_proxy.php", "public":true},
+	{"url":"http://adsbackend.com/bsc9182/solana_proxy.php", "public":true},
+	{"url":"http://api.mainnet-beta.solana.com", "public":true},
+	{"url":"http://162.55.91.243:8899", "public":false}],
+
 
 "SOL_NODE_PRIV":"http://162.55.91.243:8899",
 "SOL_NODE_PUB":"http://www.cointaxes.io/solana_proxy.php,http://adsbackend.com/bsc9182/solana_proxy.php,http://api.mainnet-beta.solana.com",

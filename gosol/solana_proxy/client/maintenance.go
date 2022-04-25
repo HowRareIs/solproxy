@@ -27,7 +27,10 @@ func (this *SOLClient) _maintenance() {
 
 		_d, _requests_done, _ := this._statsIsDead()
 		this.is_disabled = _d
-		if _requests_done < 5 && this.attr&CLIENT_CONSERVE_REQUESTS == 0 {
+
+		should_update := _requests_done < 5 && this.attr&CLIENT_CONSERVE_REQUESTS == 0
+		should_update = should_update || _requests_done < 1 && this.attr&CLIENT_CONSERVE_REQUESTS == 1
+		if should_update {
 			go func() {
 				this.GetVersion() // run a request to check if the node is alive
 			}()
@@ -37,7 +40,7 @@ func (this *SOLClient) _maintenance() {
 
 	_update_version := func() {
 		_a, _b, _c, ok := this.GetVersion()
-		if !ok {
+		if ok != R_OK {
 			fmt.Println("Can't get version for: ", this.endpoint)
 			return
 		}
@@ -48,7 +51,8 @@ func (this *SOLClient) _maintenance() {
 
 	_update_first_block := func() {
 		_b, _ok := this.GetFirstAvailableBlock()
-		if !_ok {
+		if _ok != R_OK {
+			fmt.Println("Can't get first block for: ", this.endpoint)
 			return
 		}
 

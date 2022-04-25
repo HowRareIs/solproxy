@@ -24,13 +24,12 @@ func (this *Handle_solana_info) GetActions() []string {
 
 func (this *Handle_solana_info) HandleAction(action string, data *handler_socket2.HSParams) string {
 
-	/*_round := func(n float64) float64 {
+	_round := func(n float64) float64 {
 		tmp := int(n * 1000.0)
 		return float64(tmp/100) / 10.0
 	}
 
 	if action == "getSolanaInfo" {
-
 		pub, priv := solana_proxy.GetMinBlocks()
 
 		ret := map[string]interface{}{}
@@ -46,38 +45,48 @@ func (this *Handle_solana_info) HandleAction(action string, data *handler_socket
 			sch.ForcePrivate(true)
 		}
 
-		utilization_total := float64(0)
-		sum := 0
-		for num, v := range sch.GetAll(true, false) {
-			key := fmt.Sprintf("throttle-public-%d", num)
-			tmp := v.GetThrottle().GetThrottledStatus()
-			ret[key] = tmp
-			utilization_total += tmp["p_capacity_used"].(float64)
-			sum++
+		// calculate limits
+		var limits_pub_left = [5]int{0, 0, 0, 0, 0}
+		var limits_priv_left = [5]int{0, 0, 0, 0, 0}
+		tmp := [4]int{}
+		for num, v := range sch.GetAll(true, true) {
+			tmp[0], tmp[1], tmp[2], tmp[3] = v.GetThrottleLimitsLeft()
+			for i := 0; i < 4; i++ {
+				limits_pub_left[i] += tmp[i]
+			}
+			limits_pub_left[4]++
+			ret[fmt.Sprintf("pub-%d", num)] = tmp
 		}
-		if sum == 0 {
-			sum = 1
+		for num, v := range sch.GetAll(false, true) {
+			tmp[0], tmp[1], tmp[2], tmp[3] = v.GetThrottleLimitsLeft()
+			for i := 0; i < 4; i++ {
+				limits_priv_left[i] += tmp[i]
+			}
+			limits_priv_left[4]++
+			ret[fmt.Sprintf("priv-%d", num)] = tmp
 		}
-		ret["percent-capacity-used-public"] = _round(utilization_total / float64(sum))
 
-		utilization_total = 0
-		sum = 0
-		for num, v := range sch.GetAll(false, false) {
-			key := fmt.Sprintf("throttle-private-%d", num)
-			tmp := v.GetThrottle().GetThrottledStatus()
-			ret[key] = tmp
-			utilization_total += tmp["p_capacity_used"].(float64)
-			sum++
+		// generate JSON
+		_gen := func(data [5]int) map[string]interface{} {
+			ret := map[string]interface{}{}
+			ret["requests_left"] = data[0]
+			ret["requests_single_left"] = data[1]
+			ret["byte_received_left"] = data[2]
+			if data[4] == 0 {
+				ret["utilization_percent"] = 0
+			} else {
+				ret["utilization_percent"] = _round((float64(data[3]) / float64(data[4])) / 100.0)
+			}
+			ret["node_count"] = data[4]
+			return ret
 		}
-		if sum == 0 {
-			sum = 1
-		}
-		ret["percent-capacity-used-private"] = _round(utilization_total / float64(sum))
-
+		ret["public"] = _gen(limits_pub_left)
+		ret["private"] = _gen(limits_priv_left)
+		ret["comment"] = "Per node data is requests left / requests single left / bytes reveived left / utilization percentage"
 		_tmp, _ := json.Marshal(ret)
 		data.FastReturnBNocopy(_tmp)
 		return ""
-	}*/
+	}
 
 	if action == "getFirstAvailableBlock" {
 

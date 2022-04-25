@@ -8,6 +8,7 @@ import (
 )
 
 var probe_isalive_seconds = 30
+var probe_ok_min_requests = 3
 
 type stat struct {
 	stat_error_req          int
@@ -31,26 +32,6 @@ const (
 
 func (this *SOLClient) SetAttr(attrs SOLClientAttr) {
 	this.attr = attrs
-}
-
-func (this SOLClientAttr) Display() string {
-
-	ret := ""
-	/*if this&CLIENT_DISABLE_THROTTLING > 0 {
-		ret += "✓"
-	} else {
-		ret += "x"
-	}
-	ret += "Throttling "*/
-
-	if this&CLIENT_CONSERVE_REQUESTS > 0 {
-		ret += "✓"
-	} else {
-		ret += "x"
-	}
-	ret += "Conserve requests "
-
-	return ret
 }
 
 type SOLClient struct {
@@ -126,4 +107,10 @@ func MakeClient(endpoint string, is_public_node bool, max_conns int, throttle *t
 	ret.throttle = throttle
 	ret._maintenance()
 	return &ret
+}
+
+func (this *SOLClient) GetThrottleLimitsLeft() (int, int, int, int) {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+	return this.throttle.GetLimitsLeft()
 }

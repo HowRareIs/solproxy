@@ -50,13 +50,16 @@ func (this *SOLClient) _statsIsDead() (bool, int, string) {
 		}
 	}
 
-	// make sure we have some requests,
-	// if we have no requests we assume something is wrong and we mark the node as dead
-	// if there are no requests but we're in conserving mode, let's use what we have
-	if stat_requests <= 2 && this.attr&CLIENT_CONSERVE_REQUESTS == 0 {
-		return true, stat_requests, fmt.Sprintf("Last %ds, %d request(s) <= 2", probe_isalive_seconds, stat_requests)
+	// make sure we have some requests, if not declare we're dead only in non-conserve-requests mode
+	if stat_requests < probe_ok_min_requests && this.attr&CLIENT_CONSERVE_REQUESTS == 0 {
+		log := fmt.Sprintf("Last %ds, have %d request(s) %d required",
+			probe_isalive_seconds, stat_requests, probe_ok_min_requests)
+		return true, stat_requests, log
 	}
 
+	// if we have no requests we assume something is wrong and we mark the node as dead
+	// if there are no requests but we're in conserving mode, let's use what we have
 	dead := stat_errors*5 > stat_requests
-	return dead, stat_requests, fmt.Sprintf("Last %ds, Requests: %d, Errors: %d", stat_requests, stat_errors)
+	log := fmt.Sprintf("Last %ds, Requests: %d, Errors: %d", probe_isalive_seconds, stat_requests, stat_errors)
+	return dead, stat_requests, log
 }

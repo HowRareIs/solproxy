@@ -59,15 +59,16 @@ func init() {
 			return true
 		}
 
+		// loop over workers, if we have "throttled" returned it'll try other workers
 		errors := 0
 		for _, cl := range clients {
 			resp_type, resp_data := cl.RequestForward(body)
-			if resp_type == client.FORWARD_OK {
+			if resp_type == client.R_OK {
 				w.Write(resp_data)
 				return true
 			}
 
-			if resp_type == client.FORWARD_ERROR {
+			if resp_type == client.R_ERROR {
 				errors++
 				if errors >= 2 {
 					w.Write(_passthrough_err("Request failed (e)"))

@@ -109,13 +109,25 @@ type ThrottleScore struct {
 }
 
 func (this *Throttle) _getThrottleScore() ThrottleScore {
+
+	// for non-throttled nodes get score based on last 10 seconds of data
+	// every request is worth 1 point
+	// every 10kb of data is worth 1 point
+	if len(this.limiters) == 0 {
+		pos := this.stats_pos
+		score := 0
+		for i := 0; i < 10; i++ {
+			score += this.stats[pos].stat_requests + (this.stats[pos].stat_data_received / 10000)
+			pos--
+			if pos < 0 {
+				pos = len(this.stats) - 1
+			}
+		}
+		return ThrottleScore{score, false, 0}
+	}
+
 	score := 0
 	disabled := false
-
-	//	if len(this.limiters) {
-
-	//}
-
 	for k, _ := range this.limiters {
 		_, tmp := this._getThrottleStatus(&this.limiters[k])
 		if tmp > score {
