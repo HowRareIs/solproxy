@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"gosol/solana_proxy"
 	"gosol/solana_proxy/client"
-	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -18,32 +17,26 @@ func _passthrough_err(err string) []byte {
 	out["proxy_error"] = true
 	b, e := json.Marshal(out)
 	if e != nil {
-		b = []byte("Unknown error")
+		b = []byte("\"Unknown error\"")
 	}
-	return []byte("{\"error\":\"" + string(b) + "\"}")
+	return []byte("{\"error\":" + string(b) + "}")
 }
 
 func init() {
 
-	handler_socket2.HTTPPluginRegister(func(w http.ResponseWriter, r *http.Request) bool {
+	handler_socket2.HTTPPluginRegister(func(w http.ResponseWriter, header http.Header, get map[string]string, post []byte) bool {
 
-		is_sol_rpc := strings.EqualFold("application/json", r.Header.Get("Content-Type"))
+		is_sol_rpc := strings.EqualFold("application/json", header.Get("Content-Type"))
 		if !is_sol_rpc {
 			return false
 		}
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			return false
-		}
-		r.Body.Close()
 
-		is_sol_rpc = false
-		for i := 0; i < len(body); i++ {
-			if body[i] == '{' {
+		for i := 0; i < len(post); i++ {
+			if post[i] == '{' {
 				is_sol_rpc = true
 				break
 			}
-			if body[i] == '\n' || body[i] == '\r' || body[i] == ' ' {
+			if post[i] == '\n' || post[i] == '\r' || post[i] == ' ' {
 				continue
 			}
 			break // we couldn't find JSON bracket, so it's not SOL RPC
@@ -53,7 +46,7 @@ func init() {
 		}
 
 		sch := solana_proxy.MakeScheduler()
-		clients := sch.GetAllSorted(true, false)
+		clients := sch.GetAllSorted(false, false)
 		if len(clients) == 0 {
 			w.Write(_passthrough_err("Can't find any client"))
 			return true
@@ -62,7 +55,7 @@ func init() {
 		// loop over workers, if we have "throttled" returned it'll try other workers
 		errors := 0
 		for _, cl := range clients {
-			resp_type, resp_data := cl.RequestForward(body)
+			resp_type, resp_data := cl.RequestForward(post)
 			if resp_type == client.R_OK {
 				w.Write(resp_data)
 				return true

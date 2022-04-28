@@ -1,7 +1,6 @@
 package solana_proxy
 
 import (
-	"fmt"
 	"gosol/solana_proxy/client"
 	"sort"
 )

@@ -2,6 +2,7 @@ package handler_socket2
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"sort"
 	"strconv"
@@ -11,7 +12,7 @@ import (
 	"github.com/slawomir-pryczek/handler_socket2/hscommon"
 )
 
-type HTTPPlugin func(http.ResponseWriter, *http.Request) bool
+type HTTPPlugin func(http.ResponseWriter, http.Header, map[string]string, []byte) bool
 
 var HTTPPlugins = make([]HTTPPlugin, 0)
 
@@ -31,27 +32,42 @@ func startServiceHTTP(bindTo string, handler handlerFunc) {
 
 		params := make(map[string]string)
 		for k, v := range r.URL.Query() {
-
 			v_ := strings.Join(v, ",")
 			params[k] = v_
 			req_len += len(k) + len(v)
-
 		}
 
 		for k, v := range r.Header {
 			req_len += len(k) + len(v)
 		}
 
+		// build request representation from GET and POST
+		str_req_id := r.URL.RawQuery
+		r_body := make([]byte, 0)
+		if r.Method == "POST" {
+			tmp, err := ioutil.ReadAll(r.Body)
+			if err == nil {
+				r.Body.Close()
+				r_body = tmp
+
+				if len(r_body) > 40 {
+					str_req_id += " P:" + string(r_body[0:40]) + "..."
+				} else {
+					str_req_id += " P:" + string(r_body)
+				}
+			}
+		}
+
+		_req_status := &httpRequest{str_req_id, time.Now().UnixNano(), 0, "R"}
 		httpStatMutex.Lock()
 		httpRequestId++
 		_my_reqid := httpRequestId
-		_req_status := &httpRequest{r.URL.RawQuery, time.Now().UnixNano(), 0, "R"}
 		httpRequestStatus[_my_reqid] = _req_status
 		httpStatMutex.Unlock()
 
 		// plugins support, now we can process raw HTTP request
 		for _, plugin := range HTTPPlugins {
-			if plugin(w, r) {
+			if plugin(w, r.Header, params, r_body) {
 
 				_end := time.Now().UnixNano()
 				go func(_my_reqid uint64, _end int64) {
