@@ -13,16 +13,17 @@ const (
 )
 
 type Limiter struct {
-	t            LimiterType
-	maximum      int
-	time_seconds int
+	t               LimiterType
+	maximum         int
+	in_time_windows int
 }
 
 type Throttle struct {
 	limiters []Limiter
 
-	stats_pos int
-	stats     []stat
+	stats_pos                 int
+	stats                     []stat
+	stats_window_size_seconds int
 
 	score_modifier int
 
@@ -32,12 +33,16 @@ type Throttle struct {
 }
 
 func Make() *Throttle {
+	return MakeCustom(120, 1)
+}
 
+func MakeCustom(window_count, window_size_seconds int) *Throttle {
 	ret := &Throttle{}
 	ret.limiters = make([]Limiter, 0, 10)
 
-	ret.stats = make([]stat, 60)
-	ret.stats_pos = int(time.Now().Unix()) % len(ret.stats)
+	ret.stats = make([]stat, window_count)
+	ret.stats_window_size_seconds = window_size_seconds
+	ret.stats_pos = (int(time.Now().Unix()) / ret.stats_window_size_seconds) % len(ret.stats)
 
 	for i := 0; i < len(ret.stats); i++ {
 		ret.stats[i].stat_request_by_fn = make(map[string]int)
@@ -46,7 +51,8 @@ func Make() *Throttle {
 }
 
 func (this *Throttle) AddLimiter(t LimiterType, maximum, time_seconds int) {
-	this.limiters = append(this.limiters, Limiter{t, maximum, time_seconds})
+	_tw := time_seconds / this.stats_window_size_seconds
+	this.limiters = append(this.limiters, Limiter{t, maximum, _tw})
 }
 
 func (this *Throttle) SetScoreModifier(m int) {

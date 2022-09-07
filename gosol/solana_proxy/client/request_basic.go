@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"fmt"
+	"gosol/solana_proxy/client/throttle"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -40,11 +41,11 @@ func (this *SOLClient) RequestForward(body []byte) (ResponseType, []byte) {
 	this.mu.Lock()
 
 	// THROTTLE BLOCK! Check if we're not throttled
-	if this.throttle.GetThrottleScore().Disabled {
+	if throttle.ThrottleGoup(this.throttle).GetThrottleScore().Disabled {
 		this.mu.Unlock()
 		return R_THROTTLED, nil
 	}
-	this.throttle.OnRequest(method)
+	throttle.ThrottleGoup(this.throttle).OnRequest(method)
 	// <<
 
 	this.stat_total.stat_done++
@@ -79,11 +80,11 @@ func (this *SOLClient) RequestBasic(method_param ...string) ([]byte, ResponseTyp
 
 	this.mu.Lock()
 	// THROTTLE BLOCK! Check if we're not throttled
-	if this.throttle.GetThrottleScore().Disabled {
+	if throttle.ThrottleGoup(this.throttle).GetThrottleScore().Disabled {
 		this.mu.Unlock()
 		return nil, R_THROTTLED
 	}
-	this.throttle.OnRequest(method)
+	throttle.ThrottleGoup(this.throttle).OnRequest(method)
 
 	this.stat_total.stat_done++
 	this.stat_last_60[this.stat_last_60_pos].stat_done++
@@ -186,7 +187,7 @@ func (this *SOLClient) _docall(ts_started int64, post []byte) []byte {
 	this.stat_total.stat_bytes_sent += len(post)
 	this.stat_last_60[this.stat_last_60_pos].stat_bytes_sent += len(post)
 	this.stat_running--
-	this.throttle.OnReceive(len(resp_body))
+	throttle.ThrottleGoup(this.throttle).OnReceive(len(resp_body))
 	this.mu.Unlock()
 	return resp_body
 }

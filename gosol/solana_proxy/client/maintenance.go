@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"gosol/solana_proxy/client/throttle"
 	"time"
 )
 
@@ -9,7 +10,8 @@ func (this *SOLClient) _maintenance() {
 
 	_maint_stat := func(now int64) {
 		this.mu.Lock()
-		this.throttle.OnMaintenance(int(now))
+
+		throttle.ThrottleGoup(this.throttle).OnMaintenance(int(now))
 
 		_p := int(now % 60)
 		this.stat_last_60_pos = _p

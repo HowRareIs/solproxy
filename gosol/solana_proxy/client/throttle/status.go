@@ -21,13 +21,14 @@ func (this *Throttle) GetStatus() string {
 		return ret
 	}
 
-	status := "<span style='color: #449944; font-family: monospace'> <b>⬤</b> Throttling disabled ⏵︎⏵︎⏵︎</span>\n"
+	status := "<span style='color: #449944; font-family: monospace'> <b>⬤</b> Throttling disabled (##layout##) ⏵︎⏵︎⏵︎</span>\n"
 	if (len(this.limiters) > 0) && this.status_disabled {
-		status = "<span style='color: #dd4444; font-family: monospace'> <b>⮿</b> Throttling enabled, node is paused</span>\n"
+		status = "<span style='color: #dd4444; font-family: monospace'> <b>⮿</b> Throttling enabled (##layout##), node is paused</span>\n"
 	}
 	if (len(this.limiters) > 0) && !this.status_disabled {
-		status = "<span style='color: #449944; font-family: monospace'> <b>⬤</b> Throttling enabled, node is not throttled</span>\n"
+		status = "<span style='color: #449944; font-family: monospace'> <b>⬤</b> Throttling enabled (##layout##), node is not throttled</span>\n"
 	}
+	status = strings.Replace(status, "##layout##", fmt.Sprintf("%dx%ds", len(this.stats), this.stats_window_size_seconds), 1)
 
 	for k, _ := range this.limiters {
 		v := &this.limiters[k]
@@ -39,7 +40,8 @@ func (this *Throttle) GetStatus() string {
 			_type = "bytes received"
 		}
 
-		thr_status := fmt.Sprintf(" Throtting #%d: %d second(s), maximum %d %s", k, v.time_seconds, v.maximum, _type)
+		_s := v.in_time_windows * this.stats_window_size_seconds
+		thr_status := fmt.Sprintf("  Throtting #%d: %d second(s), maximum %d %s", k, _s, v.maximum, _type)
 		if len(thr_status) < 80 {
 			thr_status += strings.Repeat(" ", 80-len(thr_status))
 		}

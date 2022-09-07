@@ -8,18 +8,21 @@
 "VERBOSE":false,
 "RUN_SERVICES":"*",
 
-"XSOL_NODES":[{"url":"http://162.55.91.243:8899", "public":true,
-	"score_modifier":-9000, "throttle":"r,30,90;f,3,50;d,200000,5"},
+"XSOL_NODES22":[{"url":"http://162.55.91.243:8899", "public":true,
+	"score_modifier":-9000, "throttle":"r,30,90;f,3,50;d,200000,5;r,3600,1000"},
 	{"url":"http://162.55.91.243:8899", "public":true,
 	"score_modifier":0},
 	{"url":"http://162.55.91.243:8899", "public":true,
 	"score_modifier":0, "throttle":[]}],
 
-"SOL_NODES":[{"url":"http://www.cointaxes.io/solana_proxy.php", "public":true},
-	{"url":"http://adsbackend.com/bsc9182/solana_proxy.php", "public":true},
-	{"url":"http://api.mainnet-beta.solana.com", "public":true},
-	{"url":"http://162.55.91.243:8899", "public":false}],
+"SOL_NODEST22":[
+	{"url":"http://162.55.91.243:8899", "public":false},
+	{"url":"https://ssc-dao.genesysgo.net", "public":true},
+	{"url":"https://rpc.ankr.com/solana", "throttle":"r,250,30"}],
 
+	"SOL_NODES":[
+		{"url":"https://rpc.ankr.com/solana", "public":true, "throttle":"r,30,90;f,5,150;d,200000,5;r,3600,1000", "score_modifier":-190000},
+		{"url":"https://rpc.ankr.com/solanax", "public":false, "score_modifier":-90000}],
 
 "SOL_NODE_PRIV":"http://162.55.91.243:8899",
 "SOL_NODE_PUB":"http://www.cointaxes.io/solana_proxy.php,http://adsbackend.com/bsc9182/solana_proxy.php,http://api.mainnet-beta.solana.com",

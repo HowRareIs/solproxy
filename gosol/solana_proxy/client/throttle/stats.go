@@ -28,7 +28,7 @@ func (this *Throttle) OnReceive(data_bytes int) {
 }
 
 func (this *Throttle) OnMaintenance(ts int) {
-	new_pos := ts % len(this.stats)
+	new_pos := (ts / this.stats_window_size_seconds) % len(this.stats)
 	if new_pos == this.stats_pos {
 		return
 	}
@@ -52,7 +52,7 @@ func (this *Throttle) _getThrottleStatus(l *Limiter) (int, int) {
 	pos := this.stats_pos
 
 	if l.t == L_REQUESTS {
-		for i := 0; i < l.time_seconds; i++ {
+		for i := 0; i < l.in_time_windows; i++ {
 			amt += this.stats[pos].stat_requests
 			pos--
 			if pos < 0 {
@@ -62,7 +62,7 @@ func (this *Throttle) _getThrottleStatus(l *Limiter) (int, int) {
 	}
 
 	if l.t == L_DATA_RECEIVED {
-		for i := 0; i < l.time_seconds; i++ {
+		for i := 0; i < l.in_time_windows; i++ {
 			amt += this.stats[pos].stat_data_received
 			pos--
 			if pos < 0 {
@@ -74,7 +74,7 @@ func (this *Throttle) _getThrottleStatus(l *Limiter) (int, int) {
 	if l.t == L_REQUESTS_PER_FN {
 		tmp := make(map[string]int)
 
-		for i := 0; i < l.time_seconds; i++ {
+		for i := 0; i < l.in_time_windows; i++ {
 			for k, v := range this.stats[pos].stat_request_by_fn {
 				tmp[k] += v
 			}

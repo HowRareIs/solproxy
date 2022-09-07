@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"gosol/solana_proxy/client/throttle"
 	"time"
 
 	"github.com/slawomir-pryczek/handler_socket2/hscommon"
@@ -77,17 +78,16 @@ func (this *SOLClient) GetStatus() string {
 	}
 
 	// Throttle status
-	node_stats += this.throttle.GetStatus()
-	node_stats_raw := this.throttle.GetThrottleScore()
+	node_stats_raw := throttle.ThrottleGoup(this.throttle).GetThrottleScore()
 
 	status += "\n"
 	status += "<b>" + _t + " Node Endpoint</b> " + this.endpoint + " <i>v" + this.version + "</i>"
-	status += fmt.Sprintf(" ... Requests running now: %d ", this.stat_running)
+	status += fmt.Sprintf(" ... Requests running now: %d ... ", this.stat_running)
 
 	// Utilization + conserve requests
 	{
-		status += "Utilization: "
-		util := fmt.Sprintf("%.02f%%", float64(node_stats_raw.CapacityUsed)/100.0)
+		util := fmt.Sprintf("<b>Σ</b> Utilization: %.02f%%, Score: %d",
+			float64(node_stats_raw.CapacityUsed)/100.0, node_stats_raw.Score)
 		if node_stats_raw.CapacityUsed == 10000 {
 			util = "<b style='color: #dd4444'>" + util + "</b>"
 		} else {
@@ -102,6 +102,9 @@ func (this *SOLClient) GetStatus() string {
 	}
 
 	status += node_stats
+	for _, throttle := range this.throttle {
+		status += throttle.GetStatus()
+	}
 
 	// Statistics
 	table := hscommon.NewTableGen("Time", "Requests", "Req/s", "Avg Time", "First Block",

@@ -54,7 +54,7 @@ type SOLClient struct {
 	serial_no uint64
 
 	attr     SOLClientAttr
-	throttle *throttle.Throttle
+	throttle []*throttle.Throttle
 }
 
 type Solclientinfo struct {
@@ -78,16 +78,17 @@ func (this *SOLClient) GetInfo() *Solclientinfo {
 	ret.First_available_block = this.first_available_block
 	ret.Is_disabled = this.is_disabled
 
-	tmp := this.throttle.GetThrottleScore()
-	ret.Is_throttled = tmp.Disabled
+	tmp := throttle.ThrottleGoup(this.throttle).GetThrottleScore()
 	ret.Score = tmp.Score
+	ret.Is_disabled = tmp.Disabled
+
 	ret.Attr = this.attr
 	this.mu.Unlock()
 
 	return &ret
 }
 
-func MakeClient(endpoint string, is_public_node bool, max_conns int, throttle *throttle.Throttle) *SOLClient {
+func MakeClient(endpoint string, is_public_node bool, max_conns int, throttle []*throttle.Throttle) *SOLClient {
 
 	tr := &http.Transport{
 		MaxIdleConns:       max_conns,
@@ -112,5 +113,5 @@ func MakeClient(endpoint string, is_public_node bool, max_conns int, throttle *t
 func (this *SOLClient) GetThrottleLimitsLeft() (int, int, int, int) {
 	this.mu.Lock()
 	defer this.mu.Unlock()
-	return this.throttle.GetLimitsLeft()
+	return throttle.ThrottleGoup(this.throttle).GetLimitsLeft()
 }
