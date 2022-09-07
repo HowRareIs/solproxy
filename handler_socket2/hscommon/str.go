@@ -62,6 +62,29 @@ func StrRealLen(s string) int {
 	return count
 }
 
+func StripHTML(s string) string {
+	ret := ""
+	htmlTagStart := '<'
+	htmlTagEnd := '>'
+
+	sr := []rune(s)
+	should_count := true
+	for _, c := range []rune(sr) {
+		if c == htmlTagStart {
+			should_count = false
+		}
+		if c == htmlTagEnd {
+			should_count = true
+			continue
+		}
+		if should_count {
+			ret += string(c)
+		}
+	}
+
+	return ret
+}
+
 func StrMessage(m string, is_ok bool) string {
 	if is_ok {
 		return "<span style='color: #449944; font-family: monospace'> <b>⬤</b> " + m + "</span>"
