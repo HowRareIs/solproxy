@@ -80,8 +80,9 @@ func (this *SOLClient) GetStatus() string {
 	// Throttle status
 	node_stats_raw := throttle.ThrottleGoup(this.throttle).GetThrottleScore()
 
+	_id := fmt.Sprint("#", this.id)
 	status += "\n"
-	status += "<b>" + _t + " Node Endpoint</b> " + this.endpoint + " <i>v" + this.version + "</i>"
+	status += "<b>" + _t + " Node " + _id + ", Endpoint</b> " + this.endpoint + " <i>v" + this.version + "</i>"
 	status += fmt.Sprintf(" ... Requests running now: %d ... ", this.stat_running)
 
 	// Utilization + conserve requests

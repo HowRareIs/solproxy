@@ -3,98 +3,19 @@ package main
 import (
 	"gosol/passthrough"
 	"gosol/solana/handle_solana_01"
+	"gosol/solana/handle_solana_admin"
 	"gosol/solana/handle_solana_info"
 	"gosol/solana/handle_solana_raw"
-	"gosol/solana_proxy"
-	"gosol/solana_proxy/client/throttle"
+	"runtime"
 	"strings"
 
 	"github.com/slawomir-pryczek/handler_socket2"
 	"github.com/slawomir-pryczek/handler_socket2/handle_echo"
 	"github.com/slawomir-pryczek/handler_socket2/handle_profiler"
 
-	"encoding/json"
 	"fmt"
 	"os"
 )
-
-func _add_node_from_config(node map[string]interface{}) {
-
-	_register := func(endpoint string, public bool, throttle []*throttle.Throttle) {
-		if len(endpoint) == 0 {
-			return
-		}
-		max_conn := 50
-		if public {
-			max_conn = 10
-		}
-		endpoint = strings.Trim(endpoint, "\r\n\t ")
-		solana_proxy.RegisterClient(endpoint, public, max_conn, throttle)
-	}
-
-	public := false
-	url := ""
-	score_modifier := 0
-	if val, ok := node["url"]; ok {
-		switch val.(type) {
-		case string:
-			url = val.(string)
-		}
-	}
-
-	if val, ok := node["public"]; ok {
-		switch val.(type) {
-		case bool:
-			public = val.(bool)
-		default:
-			fmt.Println("Warning: type mismatch for public attribute, needs to be true/false")
-		}
-	}
-
-	if val, ok := node["score_modifier"]; ok {
-		switch val.(type) {
-		case json.Number:
-			tmp, _ := val.(json.Number).Int64()
-			score_modifier = int(tmp)
-		default:
-			fmt.Println("Warning: type mismatch for score_adjust attribute, needs to be number")
-		}
-	}
-
-	if url == "" {
-		fmt.Println("Cannot read node config (no url) ... skipping")
-		return
-	}
-
-	thr := ([]*throttle.Throttle)(nil)
-	logs := []string{}
-	fmt.Printf("## Node: %s Public: %v, score modifier: %d\n", url, public, score_modifier)
-
-	if val, ok := node["throttle"]; ok {
-		switch val.(type) {
-		case string:
-			thr, logs = throttle.MakeFromConfig(val.(string))
-		default:
-			fmt.Println("Warning: Cannot read throttle settings, skipping")
-		}
-	} else {
-		if public {
-			thr, logs = throttle.MakeForPublic()
-		}
-	}
-
-	if thr == nil {
-		thr = make([]*throttle.Throttle, 0, 1)
-		thr = append(thr, throttle.Make())
-		logs = append(logs, "Throttling disabled")
-	}
-	throttle.ThrottleGoup(thr).SetScoreModifier(score_modifier)
-
-	for _, log := range logs {
-		fmt.Println(" ", log)
-	}
-	_register(url, public, thr)
-}
 
 func _read_node_config() {
 
@@ -107,7 +28,7 @@ func _read_node_config() {
 	}
 
 	for _, v := range nodes {
-		_add_node_from_config(v.(map[string]interface{}))
+		handle_solana_admin.NodeRegisterFromConfig(v.(map[string]interface{}))
 	}
 	fmt.Println("")
 }
@@ -116,7 +37,7 @@ func main() {
 	_read_node_config()
 
 	num_cpu := runtime.NumCPU() * 2
-	runtime.GOMAXPROCS(num_cpu)	// register handlers
+	runtime.GOMAXPROCS(num_cpu) // register handlers
 	handlers := []handler_socket2.ActionHandler{}
 	handlers = append(handlers, &handle_echo.HandleEcho{})
 	handlers = append(handlers, &handle_profiler.HandleProfiler{})
@@ -124,6 +45,7 @@ func main() {
 	handlers = append(handlers, &handle_solana_01.Handle_solana_01{})
 	handlers = append(handlers, &handle_solana_info.Handle_solana_info{})
 	handlers = append(handlers, &handle_passthrough.Handle_passthrough{})
+	handlers = append(handlers, &handle_solana_admin.Handle_solana_admin{})
 
 	if len(handler_socket2.Config().Get("RUN_SERVICES", "")) > 0 && handler_socket2.Config().Get("RUN_SERVICES", "") != "*" {
 		_h_modified := []handler_socket2.ActionHandler{}

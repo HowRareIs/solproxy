@@ -19,6 +19,7 @@ func (this *Throttle) OnRequest(function_name string) bool {
 	tmp := this._getThrottleScore()
 	this.status_disabled = tmp.Disabled
 	this.status_score = tmp.Score
+	this.status_capacity_used = tmp.CapacityUsed
 	return true
 }
 

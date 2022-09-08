@@ -4,6 +4,7 @@ import (
 	"gosol/solana_proxy/client/throttle"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -35,6 +36,7 @@ func (this *SOLClient) SetAttr(attrs SOLClientAttr) {
 }
 
 type SOLClient struct {
+	id                    uint64
 	client                *http.Client
 	endpoint              string
 	is_public_node        bool
@@ -58,6 +60,7 @@ type SOLClient struct {
 }
 
 type Solclientinfo struct {
+	ID                    uint64
 	Endpoint              string
 	Is_public_node        bool
 	First_available_block int
@@ -73,6 +76,7 @@ func (this *SOLClient) GetInfo() *Solclientinfo {
 	ret := Solclientinfo{}
 
 	this.mu.Lock()
+	ret.ID = this.id
 	ret.Endpoint = this.endpoint
 	ret.Is_public_node = this.is_public_node
 	ret.First_available_block = this.first_available_block
@@ -81,12 +85,15 @@ func (this *SOLClient) GetInfo() *Solclientinfo {
 	tmp := throttle.ThrottleGoup(this.throttle).GetThrottleScore()
 	ret.Score = tmp.Score
 	ret.Is_disabled = tmp.Disabled
+	ret.Is_throttled = tmp.CapacityUsed == 10000
 
 	ret.Attr = this.attr
 	this.mu.Unlock()
 
 	return &ret
 }
+
+var new_client_id = uint64(0)
 
 func MakeClient(endpoint string, is_public_node bool, max_conns int, throttle []*throttle.Throttle) *SOLClient {
 
@@ -107,6 +114,8 @@ func MakeClient(endpoint string, is_public_node bool, max_conns int, throttle []
 
 	ret.throttle = throttle
 	ret._maintenance()
+
+	ret.id = atomic.AddUint64(&new_client_id, 1)
 	return &ret
 }
 

@@ -1,6 +1,8 @@
 package throttle
 
-import "math"
+import (
+	"math"
+)
 
 type ThrottleGoup []*Throttle
 
@@ -48,6 +50,7 @@ func (this ThrottleGoup) GetThrottleScore() ThrottleScore {
 			ret.CapacityUsed = tmp.CapacityUsed
 		}
 	}
+
 	return ret
 }
 

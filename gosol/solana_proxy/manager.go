@@ -2,7 +2,7 @@ package solana_proxy
 
 import (
 	"gosol/solana_proxy/client"
-	"gosol/solana_proxy/client/throttle"
+	"math"
 	"sync"
 )
 
@@ -13,12 +13,43 @@ func init() {
 	clients = make([]*client.SOLClient, 0, 10)
 }
 
-func RegisterClient(endpoint string, is_public_node bool, max_conns int, throttle []*throttle.Throttle) {
-	cl := client.MakeClient(endpoint, is_public_node, max_conns, throttle)
+func ClientRegister(c *client.SOLClient) {
+	ClientManage(c, math.MaxUint64)
+}
+
+func ClientRemove(id uint64) bool {
+	return ClientManage(nil, id)
+}
+
+func ClientManage(add *client.SOLClient, removeClientID uint64) bool {
+	acted := false
 
 	mu.Lock()
-	clients = append(clients, cl)
-	mu.Unlock()
+	defer mu.Unlock()
+
+	if add != nil && removeClientID == math.MaxUint64 {
+		clients = append(clients, add)
+		return true
+	}
+
+	tmp := make([]*client.SOLClient, 0, len(clients))
+	for _, client := range clients {
+		if client.GetInfo().ID == removeClientID {
+			acted = true
+			if add != nil {
+				tmp = append(tmp, add)
+				add = nil
+			}
+			continue
+		}
+		tmp = append(tmp, client)
+	}
+	if add != nil {
+		tmp = append(tmp, add)
+	}
+
+	clients = tmp
+	return acted
 }
 
 func GetMinBlocks() (int, int) {
