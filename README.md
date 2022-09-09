@@ -21,7 +21,7 @@ There is automatic throttling/routing implemented. If node is throttled the requ
 ```
 
 ## Simple mode
-There are 2 modes of operation. In **simple mode** you connect to the proxy like you'd do to a normal solana client, and your requests will get routed between available **private** nodes. You'll add all nodes as private.
+There are 2 modes of operation. In **simple mode** you connect to the proxy like you'd do to a normal solana node, and your requests will get routed between available **private** nodes. You'll add all nodes as private.
 
 ## Configuration
 ```json
