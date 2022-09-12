@@ -8,6 +8,12 @@ It allows to:
 - Automatically detects and skips failed or overloaded/timeouting nodes
 - Automatically re-do failed requests on different node if they timed out or returned an error
 
+## Building the software
+Run following commands to build for windows / linux. Golang 1.18 required. See 
+<pre>cd solproxy/gosol/main
+go build main.go
+</pre>
+
 ## Node types
 There are 2 node types defined
 - Public - this node stores full archival chain data
