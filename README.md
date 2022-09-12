@@ -19,17 +19,10 @@ Now you can run main or see [Installation Instructions](INSTALL.md)
 ## Node types
 There are 2 node types defined
 - Public - this node stores full archival chain data
-- Private - fast local node with partial chain data
-If you don't need to distinct and you want to use the proxy just to route your requests to different providers for loadbalancing / failover - you can setup all nodes as a private type.
+- Private - fast local node (usually with partial chain data)
+If you don't need to distinct and you want to use the proxy just to route your requests to different providers for loadbalancing / failover - you should setup all nodes as a private type.
 
-## Throttling
-There is automatic throttling/routing implemented. If node is throttled the request will be routed to different node. If all available nodes are throttled so there's no node to pick to run the request - you will get response with error attribute and issue description.
-```json
-{"error":"Throttled public node, please wait","throttle_info":{"requests":{"description":"requests made","max":99,"value":3},"requests_fn":{"description":"requests made calling single function","max":39,"value":3},"received":{"description":"bytes received","max":1000000,"value":4735645}},"throttle_timespan_seconds":12,"throttled":true,"throttled_comment":"Too much data received 4735645/1000000"}
-```
-
-## Simple mode
-There are 2 modes of operation. In **simple mode** you connect to the proxy like you'd do to a normal solana node, and your requests will get routed between available **private** nodes. You'll add all nodes as private.
+This should be default, simplest mode of operation. You'll setup all your nodes as private nodes, and then you can connect to solana proxy via any api just like you'd do to a "normal" solana node, using port 7778.
 
 ## Configuration
 ```json
@@ -53,8 +46,6 @@ Throttle can be configured in following way:
 - f[unction call],time_in_seconds,limit
 - d[ata received],time_in_seconds,limit in bytes
 
-
-
 ## Accessing proxy information
 http://127.0.0.1:7778/?action=server-status
 You can access server-status page by using server-status action. There's also PHP script available to password-protect the status page so it can be accessible from outside.
@@ -63,21 +54,12 @@ http://127.0.0.1:7778/?action=getSolanaInfo
 This url will return throttling status for public and private nodes.
 
 http://127.0.0.1:7778/?action=getFirstAvailableBlock
-Gets first available block.
+Gets first available block for public and private nodes.
 
-### Advanced usage
-In advanced mode you will access the proxy using HTTP. Requests will get routed to public or private node depends on if they need archival data to be fullfilled. Private node gets picked by default, then if it has no data needed to fullfill the request - it'll be re-done on public node. 
+## Throttling
+There is automatic throttling/routing implemented. If node is throttled the request will be routed to different node. If all available nodes are throttled so there's no node to pick to run the request - you will get response with error attribute and issue description.
+```json
+{"error":"Throttled public node, please wait","throttle_info":{"requests":{"description":"requests made","max":99,"value":3},"requests_fn":{"description":"requests made calling single function","max":39,"value":3},"received":{"description":"bytes received","max":1000000,"value":4735645}},"throttle_timespan_seconds":12,"throttled":true,"throttled_comment":"Too much data received 4735645/1000000"}
+```
 
-You can also add &public=1 or &private=1 to force public or private node to be picked to run the request. The preferred way of interacting with proxy when using HTTP is using &public=1 when you need to run a request which will require archival data and skip adding &private as private is the default anyway and by adding it you'll just disable fallback to a public node for given request.
-
-http://127.0.0.1:7778/?action=getBlock&block=95535092
-
-http://127.0.0.1:7778/?action=getTransaction&hash=4P4Gpz2BEqFQ2p4MqWKqPM8ZD6FFbJsM9BUrvAssrTybUrFxZxRfESE4CUbNBsMx655QEXhup8UMACKZ37wrSfGH
-
-http://127.0.0.1:7778/?action=getBalance&pubkey=2ExPNqnptwVQ1h1LNkeF1o1CahHMX1AjsNxi7FJXXWbT
-
-### Advanded mode, raw calls
-There is a possibility to run any solana RPC call using action=solanaRaw. One private node gets picked first, then the request can be routed to public node if the private node has no required chain data and returns null. However that's not quaranteed, as some requrest will not return null when data is (partially) missing.
-
-http://127.0.0.1:7778/?action=solanaRaw&method=getConfirmedBlock&params=[94135095]
-
+Please see [Advanced usage](ADVANCED.md) for information about more complex usage scenarios.
