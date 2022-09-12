@@ -9,7 +9,7 @@ It allows to:
 - Automatically re-do failed requests on different node if they timed out or returned an error
 
 ## Building the software
-Run following commands to build for windows / linux. Golang 1.18 required. See 
+Run following commands to build for windows / linux. Golang 1.18 required. 
 <pre>cd solproxy/gosol/main
 go build main.go
 </pre>
