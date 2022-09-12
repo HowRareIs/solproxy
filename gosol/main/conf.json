@@ -1,30 +1,14 @@
 {
-"BIND_TO":               "127.0.0.1:7777,h127.0.0.1:7778,u127.0.0.1:7777",
-"BIND_TO_162.55.91.243": "162.55.91.243:7777,h162.55.91.243:7778",
-"BIND_TO_192.168.10.1":  "192.168.10.1:7777,h192.168.10.1:7778",
+"BIND_TO":				"127.0.0.1:7777,h127.0.0.1:7778",
+"BIND_TO_192.168.10.1":	"192.168.10.1:7777,h192.168.10.1:7778",
 
 "FORCE_START":true,
 "DEBUG":false,
 "VERBOSE":false,
-"RUN_SERVICES":"*",
 
-"XSOL_NODES22":[{"url":"http://162.55.91.243:8899", "public":true,
-	"score_modifier":-9000, "throttle":"r,30,90;f,3,50;d,200000,5;r,3600,1000"},
-	{"url":"http://162.55.91.243:8899", "public":true,
-	"score_modifier":0},
-	{"url":"http://162.55.91.243:8899", "public":true,
-	"score_modifier":0, "throttle":[]}],
+"SOL_NODES":[{"url":"http://127.0.0.1:8899", "public":false, "score_modifier":-90000},
+	{"url":"https://api.mainnet-beta.solana.com", "public":false, "throttle":"r,80,10;f,30,10;d,80000000,30", "probe_time":10},
+	{"url":"https://solana-api.projectserum.com", "public":false, "throttle":"r,80,10;f,30,10;d,80000000,30", "probe_time":10}],
 
-"SOL_NODEST22":[
-	{"url":"http://162.55.91.243:8899", "public":false},
-	{"url":"https://ssc-dao.genesysgo.net", "public":true},
-	{"url":"https://rpc.ankr.com/solana", "throttle":"r,250,30"}],
-
-	"SOL_NODES":[
-		{"url":"https://rpc.ankr.com/solana", "public":true, "throttle":"r,30,90;f,5,150;d,200000,5;r,3600,1000", "score_modifier":-190000},
-		{"url":"https://rpc.ankr.com/solanax", "public":false, "score_modifier":-90000}],
-
-"SOL_NODE_PRIV":"http://162.55.91.243:8899",
-"SOL_NODE_PUB":"http://www.cointaxes.io/solana_proxy.php,http://adsbackend.com/bsc9182/solana_proxy.php,http://api.mainnet-beta.solana.com",
-"SOL_NODE_ALT_PUB":"https://wandering-purple-sun.solana-mainnet.quiknode.pro/d5ae870b21180fe58071a66990be9824b3d7002f/"
+"RUN_SERVICES":"*"
 }

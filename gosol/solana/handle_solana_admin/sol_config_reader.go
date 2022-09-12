@@ -7,10 +7,11 @@ import (
 	"gosol/solana_proxy/client"
 	"gosol/solana_proxy/client/throttle"
 	"math"
+	"reflect"
 	"strings"
 )
 
-func NodeRegister(endpoint string, public bool, throttle []*throttle.Throttle) *client.SOLClient {
+func NodeRegister(endpoint string, public bool, probe_time int, throttle []*throttle.Throttle) *client.SOLClient {
 	if len(endpoint) == 0 {
 		return nil
 	}
@@ -20,41 +21,37 @@ func NodeRegister(endpoint string, public bool, throttle []*throttle.Throttle) *
 	}
 	endpoint = strings.Trim(endpoint, "\r\n\t ")
 
-	cl := client.MakeClient(endpoint, public, max_conn, throttle)
+	if probe_time == -1 {
+		if public {
+			probe_time = 10
+		} else {
+			probe_time = 1
+		}
+	}
+
+	cl := client.MakeClient(endpoint, public, probe_time, max_conn, throttle)
 	solana_proxy.ClientManage(cl, math.MaxUint64)
 	return cl
 }
 
+func _get_cfg_data[T any](node map[string]interface{}, attr string, def T) T {
+	if val, ok := node[attr]; ok {
+		switch val.(type) {
+		case T:
+			return val.(T)
+		default:
+			fmt.Println("Warning: type mismatch for", attr, "attribute is", reflect.TypeOf(val).Name(), ", needs to be ", reflect.TypeOf(new(T)).Name())
+		}
+	}
+	return def
+}
+
 func NodeRegisterFromConfig(node map[string]interface{}) *client.SOLClient {
 
-	public := false
-	url := ""
-	score_modifier := 0
-	if val, ok := node["url"]; ok {
-		switch val.(type) {
-		case string:
-			url = val.(string)
-		}
-	}
-
-	if val, ok := node["public"]; ok {
-		switch val.(type) {
-		case bool:
-			public = val.(bool)
-		default:
-			fmt.Println("Warning: type mismatch for public attribute, needs to be true/false")
-		}
-	}
-
-	if val, ok := node["score_modifier"]; ok {
-		switch val.(type) {
-		case json.Number:
-			tmp, _ := val.(json.Number).Int64()
-			score_modifier = int(tmp)
-		default:
-			fmt.Println("Warning: type mismatch for score_adjust attribute, needs to be number")
-		}
-	}
+	url := _get_cfg_data(node, "url", "")
+	public := _get_cfg_data(node, "public", false)
+	score_modifier, _ := _get_cfg_data(node, "score_modifier", json.Number("0")).Int64()
+	probe_time, _ := _get_cfg_data(node, "probe_time", json.Number("-1")).Int64()
 
 	if url == "" {
 		fmt.Println("Cannot read node config (no url) ... skipping")
@@ -70,7 +67,7 @@ func NodeRegisterFromConfig(node map[string]interface{}) *client.SOLClient {
 		case string:
 			thr, logs = throttle.MakeFromConfig(val.(string))
 		default:
-			fmt.Println("Warning: Cannot read throttle settings, skipping")
+			fmt.Println("Warning: Cannot read throttle settings, skipping throttling")
 		}
 	} else {
 		if public {
@@ -83,11 +80,11 @@ func NodeRegisterFromConfig(node map[string]interface{}) *client.SOLClient {
 		thr = append(thr, throttle.Make())
 		logs = append(logs, "Throttling disabled")
 	}
-	throttle.ThrottleGoup(thr).SetScoreModifier(score_modifier)
+	throttle.ThrottleGoup(thr).SetScoreModifier(int(score_modifier))
 
 	for _, log := range logs {
 		fmt.Println(" ", log)
 	}
 
-	return NodeRegister(url, public, thr)
+	return NodeRegister(url, public, int(probe_time), thr)
 }

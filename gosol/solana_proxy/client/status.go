@@ -58,14 +58,14 @@ func (this *SOLClient) GetStatus() string {
 			node_health = hscommon.StrMessage("Node is healthy and can process requests", true)
 		}
 		node_health = hscommon.StrPostfixHTML(node_health, 80, " ")
-		node_health += fmt.Sprintf("%d second(s) probing time\n", probe_isalive_seconds)
-		node_stats += node_health
+		node_health += this._probe_log
+		node_stats += node_health + "\n"
 	}
 
 	// Future status
 	{
 		future_status := ""
-		_dead, _, _comment := this._statsIsDead()
+		_dead, _, _, _comment := this._statsIsDead()
 		if _dead {
 			future_status = fmt.Sprintf("New health status will be: Not Healthy ")
 		} else {
@@ -96,7 +96,7 @@ func (this *SOLClient) GetStatus() string {
 		}
 
 		conserve_requests := ""
-		if this.attr&CLIENT_CONSERVE_REQUESTS > 0 {
+		if this._probe_time >= 10 {
 			conserve_requests = "<span class='tooltip' style='color: #8B4513'> (?)Conserve Requests <div>Health checks are limited for\nthis node to conserve requests.\n\nIf you're paying per-request it's good\nto enable this mode</div></span>"
 		}
 		status += util + conserve_requests + "\n"

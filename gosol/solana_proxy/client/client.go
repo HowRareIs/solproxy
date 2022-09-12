@@ -8,9 +8,6 @@ import (
 	"time"
 )
 
-var probe_isalive_seconds = 30
-var probe_ok_min_requests = 3
-
 type stat struct {
 	stat_error_req          int
 	stat_error_resp         int
@@ -57,6 +54,9 @@ type SOLClient struct {
 
 	attr     SOLClientAttr
 	throttle []*throttle.Throttle
+
+	_probe_time int
+	_probe_log  string
 }
 
 type Solclientinfo struct {
@@ -95,7 +95,7 @@ func (this *SOLClient) GetInfo() *Solclientinfo {
 
 var new_client_id = uint64(0)
 
-func MakeClient(endpoint string, is_public_node bool, max_conns int, throttle []*throttle.Throttle) *SOLClient {
+func MakeClient(endpoint string, is_public_node bool, probe_time int, max_conns int, throttle []*throttle.Throttle) *SOLClient {
 
 	tr := &http.Transport{
 		MaxIdleConns:       max_conns,
@@ -107,6 +107,7 @@ func MakeClient(endpoint string, is_public_node bool, max_conns int, throttle []
 	ret.client = &http.Client{Transport: tr, Timeout: 5 * time.Second}
 	ret.endpoint = endpoint
 	ret.is_public_node = is_public_node
+	ret._probe_time = probe_time
 	ret.stat_total.stat_request_by_fn = make(map[string]int)
 	for i := 0; i < len(ret.stat_last_60); i++ {
 		ret.stat_last_60[i].stat_request_by_fn = make(map[string]int)

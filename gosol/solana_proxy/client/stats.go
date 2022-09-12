@@ -35,7 +35,15 @@ func (this *SOLClient) _statsGetAggr(seconds int) stat {
 	return s
 }
 
-func (this *SOLClient) _statsIsDead() (bool, int, string) {
+func (this *SOLClient) _statsIsDead() (bool, int, int, string) {
+
+	probe_isalive_seconds := this._probe_time * 2
+	if probe_isalive_seconds < 30 {
+		probe_isalive_seconds = 30
+	}
+	if probe_isalive_seconds > 60 {
+		probe_isalive_seconds = 60
+	}
 
 	stat_requests := 0
 	stat_errors := 0
@@ -50,16 +58,12 @@ func (this *SOLClient) _statsIsDead() (bool, int, string) {
 		}
 	}
 
-	// make sure we have some requests, if not declare we're dead only in non-conserve-requests mode
-	if stat_requests < probe_ok_min_requests && this.attr&CLIENT_CONSERVE_REQUESTS == 0 {
-		log := fmt.Sprintf("Last %ds, have %d request(s) %d required",
-			probe_isalive_seconds, stat_requests, probe_ok_min_requests)
-		return true, stat_requests, log
-	}
-
 	// if we have no requests we assume something is wrong and we mark the node as dead
-	// if there are no requests but we're in conserving mode, let's use what we have
-	dead := stat_errors*5 > stat_requests
-	log := fmt.Sprintf("Last %ds, Requests: %d, Errors: %d", probe_isalive_seconds, stat_requests, stat_errors)
-	return dead, stat_requests, log
+	// only if we're probing the node
+	dead := this._probe_time == 0 && stat_errors*5 > stat_requests
+	dead = dead || this._probe_time > 0 && stat_errors*5 >= stat_requests
+
+	log := fmt.Sprintf("Health probing time %ds every %ds, Requests: %d, Errors: %d", probe_isalive_seconds, this._probe_time,
+		stat_requests, stat_errors)
+	return dead, stat_requests, stat_errors, log
 }

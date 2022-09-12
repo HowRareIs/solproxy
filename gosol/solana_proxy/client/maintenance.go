@@ -27,14 +27,16 @@ func (this *SOLClient) _maintenance() {
 		this.stat_last_60[_p].stat_bytes_received = 0
 		this.stat_last_60[_p].stat_bytes_sent = 0
 
-		_d, _requests_done, _ := this._statsIsDead()
+		_d, _req_ok, _req_err, _log := this._statsIsDead()
 		this.is_disabled = _d
+		this._probe_log = _log
 
-		should_update := _requests_done < 5 && this.attr&CLIENT_CONSERVE_REQUESTS == 0
-		should_update = should_update || _requests_done < 1 && this.attr&CLIENT_CONSERVE_REQUESTS == 1
-		if should_update {
+		// if we don't have at least 2 requests,
+		// run a request to check if the node is alive
+		// this._probe_time related
+		if _req_ok+_req_err < 2 && this._probe_time > 0 {
 			go func() {
-				this.GetVersion() // run a request to check if the node is alive
+				this.GetVersion()
 			}()
 		}
 		this.mu.Unlock()
@@ -78,22 +80,15 @@ func (this *SOLClient) _maintenance() {
 			// update version and first block
 			now = _t
 
-			// conserve requests, don't probe as often
-			if this.attr&CLIENT_CONSERVE_REQUESTS > 0 {
-				if now%120 == 0 {
+			// if we have probing time set - use that
+			if pt := int64(this._probe_time); pt > 0 {
+				pt_by2 := pt * 2
+				if now%pt_by2 == 0 {
 					_update_version()
 				}
-				if now%120 == 60 {
+				if now%pt_by2 == pt {
 					_update_first_block()
 				}
-				continue
-			}
-
-			if (now%2 == 0 && !this.is_public_node) || now%20 == 0 {
-				_update_version()
-			}
-			if (now%2 == 1 && !this.is_public_node) || now%20 == 10 {
-				_update_first_block()
 			}
 		}
 	}()
