@@ -3,16 +3,18 @@ HowRare Solana RPC proxy is there to allow project creators to freely route sola
 
 It allows to:
 - Route requests between fast local node(s) with partial chain data and remote node(s) with full chain history
-- Makes it possible to keep requests below allocated limits with per-function, per-request and per-transfer capping
+- Keep requests below allocated limits with per-function, per-request and per-transfer capping
 - Spread the load across many nodes/providers
-- Automatically detects and skips failed or overloaded/timeouting nodes
-- Automatically re-do failed requests on different node if they timed out or returned an error
+- Automatically detect and skip failed/overloaded/timeouting nodes
+- Automatically re-do failed requests on different node if they timed-out or returned an error
 
 ## Building the software
 Run following commands to build for windows / linux. Golang 1.18 required. 
 <pre>cd solproxy/gosol/main
 go build main.go
 </pre>
+
+Now you can run main or see [Installation Instructions](INSTALL.md)
 
 ## Node types
 There are 2 node types defined
