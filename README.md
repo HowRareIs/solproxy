@@ -1,3 +1,8 @@
+
+<p align="center">
+  <img src="doc/logo_light.svg" width="350">
+</p>
+
 # HowRare Solana RPC proxy
 HowRare Solana RPC proxy is there to allow project creators to freely route Solana RPC calls to different Solana nodes utilizing prioritization and capping.
 
@@ -8,13 +13,17 @@ It allows to:
 - Automatically detect and skip failed/overloaded/timeouting nodes
 - Automatically re-do failed requests on different node if they timed-out or returned an error
 
+<p align="center">
+  <img src="doc/server-status-solproxy.png" width="550">
+</p>
+
 ## Building the software
 Run following commands to build for windows / linux. Golang 1.18 required. 
 <pre>cd solproxy/gosol/main
 go build main.go
 </pre>
 
-Now you can run main or see [Installation Instructions](INSTALL.md)
+Now you can run main or see [Installation Instructions](doc/INSTALL.md)
 
 ## Node types
 There are 2 node types defined
@@ -62,4 +71,4 @@ There is automatic throttling/routing implemented. If node is throttled the requ
 {"error":"Throttled public node, please wait","throttle_info":{"requests":{"description":"requests made","max":99,"value":3},"requests_fn":{"description":"requests made calling single function","max":39,"value":3},"received":{"description":"bytes received","max":1000000,"value":4735645}},"throttle_timespan_seconds":12,"throttled":true,"throttled_comment":"Too much data received 4735645/1000000"}
 ```
 
-Please see [Advanced usage](ADVANCED.md) for information about more complex usage scenarios.
+Please see [Advanced usage](doc/ADVANCED.md) for information about more complex usage scenarios.
