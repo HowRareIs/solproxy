@@ -1,5 +1,5 @@
 ## Installation
-It's not required to install, you can run directly from console and the proxy will work right after compiling, using standard solana public nodes.
+It's not required to install, you can run directly from console and the proxy will work right after compiling, using standard Solana public nodes.
 
 ## Installing as a service
 - Create a new user, it can be called solproxy
