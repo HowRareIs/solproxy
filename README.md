@@ -1,5 +1,5 @@
 # HowRare Solana RPC proxy
-HowRare Solana RPC proxy is there to allow project creators to freely route solana RPC calls to different solana nodes utilizing prioritization and capping.
+HowRare Solana RPC proxy is there to allow project creators to freely route Solana RPC calls to different Solana nodes utilizing prioritization and capping.
 
 It allows to:
 - Route requests between fast local node(s) with partial chain data and remote node(s) with full chain history
@@ -22,7 +22,7 @@ There are 2 node types defined
 - Private - fast local node (usually with partial chain data)
 If you don't need to distinct and you want to use the proxy just to route your requests to different providers for loadbalancing / failover - you should setup all nodes as a private type.
 
-This should be default, simplest mode of operation. You'll setup all your nodes as private nodes, and then you can connect to solana proxy via any api just like you'd do to a "normal" solana node, using port 7778.
+This should be default, simplest mode of operation. You'll setup all your nodes as private nodes, and then you can connect to Solana proxy via any api just like you'd do to a "normal" Solana node, using port 7778.
 
 ## Configuration
 ```json
