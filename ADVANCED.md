@@ -11,6 +11,6 @@ http://127.0.0.1:7778/?action=getTransaction&hash=4P4Gpz2BEqFQ2p4MqWKqPM8ZD6FFbJ
 http://127.0.0.1:7778/?action=getBalance&pubkey=2ExPNqnptwVQ1h1LNkeF1o1CahHMX1AjsNxi7FJXXWbT
 
 ### Advanded mode, raw calls
-There is a possibility to run any solana RPC call using action=solanaRaw. One private node gets picked first, then the request can be routed to public node if the private node has no required chain data and returns null. However that's not quaranteed, as some requrest will not return null when data is (partially) missing.
+There is a possibility to run any Solana RPC call using action=solanaRaw. One private node gets picked first, then the request can be routed to public node if the private node has no required chain data and returns null. However that's not quaranteed, as some requrest will not return null when data is (partially) missing.
 
 http://127.0.0.1:7778/?action=solanaRaw&method=getConfirmedBlock&params=[94135095]
