@@ -84,8 +84,7 @@ func (this *SOLClient) GetInfo() *Solclientinfo {
 
 	tmp := throttle.ThrottleGoup(this.throttle).GetThrottleScore()
 	ret.Score = tmp.Score
-	ret.Is_disabled = tmp.Disabled
-	ret.Is_throttled = tmp.CapacityUsed == 10000
+	ret.Is_throttled = tmp.Throttled
 
 	ret.Attr = this.attr
 	this.mu.Unlock()

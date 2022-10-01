@@ -28,7 +28,7 @@ type Throttle struct {
 	score_modifier int
 
 	status_score         int
-	status_disabled      bool
+	status_throttled     bool
 	status_capacity_used int
 }
 

@@ -7,7 +7,7 @@ type stat struct {
 }
 
 func (this *Throttle) OnRequest(function_name string) bool {
-	if this.status_disabled {
+	if this.status_throttled {
 		return false
 	}
 
@@ -17,7 +17,7 @@ func (this *Throttle) OnRequest(function_name string) bool {
 
 	// update statistics
 	tmp := this._getThrottleScore()
-	this.status_disabled = tmp.Disabled
+	this.status_throttled = tmp.Throttled
 	this.status_score = tmp.Score
 	this.status_capacity_used = tmp.CapacityUsed
 	return true
@@ -41,7 +41,7 @@ func (this *Throttle) OnMaintenance(ts int) {
 
 	// update statistics, as data is changing
 	tmp := this._getThrottleScore()
-	this.status_disabled = tmp.Disabled
+	this.status_throttled = tmp.Throttled
 	this.status_score = tmp.Score
 	this.status_capacity_used = tmp.CapacityUsed
 }
@@ -105,7 +105,7 @@ func (this *Throttle) _getThrottleStatus(l *Limiter) (int, int) {
 // Get Score 0-10000
 type ThrottleScore struct {
 	Score        int
-	Disabled     bool
+	Throttled    bool
 	CapacityUsed int
 }
 
@@ -146,5 +146,5 @@ func (this *Throttle) _getThrottleScore() ThrottleScore {
 }
 
 func (this *Throttle) GetThrottleScore() ThrottleScore {
-	return ThrottleScore{this.status_score, this.status_disabled, this.status_capacity_used}
+	return ThrottleScore{this.status_score, this.status_throttled, this.status_capacity_used}
 }

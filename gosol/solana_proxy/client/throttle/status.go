@@ -22,11 +22,11 @@ func (this *Throttle) GetStatus() string {
 	}
 
 	status := "<span style='color: #449944; font-family: monospace'> <b>⬤</b> Throttling disabled (##layout##) ⏵︎⏵︎⏵︎</span>\n"
-	if (len(this.limiters) > 0) && this.status_disabled {
-		status = "<span style='color: #dd4444; font-family: monospace'> <b>⮿</b> Throttling enabled (##layout##), node is paused</span>\n"
+	if (len(this.limiters) > 0) && this.status_throttled {
+		status = "<span style='color: #dd4444; font-family: monospace'> <b>⮿</b> Throttling enabled (##layout##), node is throttled</span>\n"
 	}
-	if (len(this.limiters) > 0) && !this.status_disabled {
-		status = "<span style='color: #449944; font-family: monospace'> <b>⬤</b> Throttling enabled (##layout##), node is not throttled</span>\n"
+	if (len(this.limiters) > 0) && !this.status_throttled {
+		status = "<span style='color: #449944; font-family: monospace'> <b>⬤</b> Throttling enabled (##layout##), node is NOT throttled</span>\n"
 	}
 	status = strings.Replace(status, "##layout##", fmt.Sprintf("%dx%ds", len(this.stats), this.stats_window_size_seconds), 1)
 
@@ -78,7 +78,7 @@ func (this *Throttle) GetStatus() string {
 
 func (this *Throttle) GetLimitsLeft() (int, int, int, int) {
 	tmp := this.GetThrottleScore()
-	if tmp.Disabled {
+	if tmp.Throttled {
 		return 0, 0, 0, 10000
 	}
 

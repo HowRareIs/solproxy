@@ -9,7 +9,7 @@ type ThrottleGoup []*Throttle
 func (this ThrottleGoup) OnRequest(function_name string) bool {
 
 	for _, throttle := range this {
-		if throttle.status_disabled {
+		if throttle.status_throttled {
 			return false
 		}
 	}
@@ -37,7 +37,7 @@ func (this ThrottleGoup) OnMaintenance(data_bytes int) {
 func (this ThrottleGoup) GetThrottleScore() ThrottleScore {
 	ret := ThrottleScore{}
 	ret.Score = math.MinInt64
-	ret.Disabled = false
+	ret.Throttled = false
 	ret.CapacityUsed = 0
 	for _, throttle := range this {
 
@@ -45,7 +45,7 @@ func (this ThrottleGoup) GetThrottleScore() ThrottleScore {
 		if tmp.Score > ret.Score {
 			ret.Score = tmp.Score
 		}
-		ret.Disabled = ret.Disabled || tmp.Disabled
+		ret.Throttled = ret.Throttled || tmp.Throttled
 		if tmp.CapacityUsed > ret.CapacityUsed {
 			ret.CapacityUsed = tmp.CapacityUsed
 		}

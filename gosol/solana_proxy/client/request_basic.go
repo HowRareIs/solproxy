@@ -41,7 +41,7 @@ func (this *SOLClient) RequestForward(body []byte) (ResponseType, []byte) {
 	this.mu.Lock()
 
 	// THROTTLE BLOCK! Check if we're not throttled
-	if throttle.ThrottleGoup(this.throttle).GetThrottleScore().Disabled {
+	if throttle.ThrottleGoup(this.throttle).GetThrottleScore().Throttled {
 		this.mu.Unlock()
 		return R_THROTTLED, nil
 	}
@@ -80,7 +80,7 @@ func (this *SOLClient) RequestBasic(method_param ...string) ([]byte, ResponseTyp
 
 	this.mu.Lock()
 	// THROTTLE BLOCK! Check if we're not throttled
-	if throttle.ThrottleGoup(this.throttle).GetThrottleScore().Disabled {
+	if throttle.ThrottleGoup(this.throttle).GetThrottleScore().Throttled {
 		this.mu.Unlock()
 		return nil, R_THROTTLED
 	}
