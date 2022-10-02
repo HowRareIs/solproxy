@@ -154,8 +154,12 @@ func (this *SOLClient) _docall(ts_started int64, post []byte) []byte {
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if err != nil {
+
+	if last_error := isHTTPError(resp, err, post); last_error != nil {
 		this.mu.Lock()
+		last_error.counter = this._last_error.counter + 1
+		this._last_error = *last_error
+
 		this.stat_total.stat_error_resp++
 		this.stat_last_60[this.stat_last_60_pos].stat_error_resp++
 		this.stat_running--
@@ -164,8 +168,11 @@ func (this *SOLClient) _docall(ts_started int64, post []byte) []byte {
 	}
 
 	resp_body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
+	if last_error := isGenericError(err, post); last_error != nil {
 		this.mu.Lock()
+		last_error.counter = this._last_error.counter + 1
+		this._last_error = *last_error
+
 		this.stat_total.stat_error_resp_read++
 		this.stat_last_60[this.stat_last_60_pos].stat_error_resp_read++
 		this.stat_running--

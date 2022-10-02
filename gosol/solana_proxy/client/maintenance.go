@@ -61,13 +61,26 @@ func (this *SOLClient) _maintenance() {
 		}
 
 		this.mu.Lock()
-		this.first_available_block = _b
+		this.available_block_first = _b
+		this.mu.Unlock()
+	}
+
+	_update_last_block := func() {
+		_b, _ok := this.GetLastAvailableBlock()
+		if _ok != R_OK {
+			fmt.Println("Can't get last block for: ", this.endpoint)
+			return
+		}
+
+		this.mu.Lock()
+		this.available_block_last = _b
 		this.mu.Unlock()
 	}
 
 	// run first update, get all data required for the node to work!
 	_update_version()
 	_update_first_block()
+	_update_last_block()
 	go func() {
 		for {
 			now := time.Now().Unix()
@@ -82,12 +95,15 @@ func (this *SOLClient) _maintenance() {
 
 			// if we have probing time set - use that
 			if pt := int64(this._probe_time); pt > 0 {
-				pt_by2 := pt * 2
-				if now%pt_by2 == 0 {
+				pt_by3 := pt * 3
+				if now%pt_by3 == 0 {
 					_update_version()
 				}
-				if now%pt_by2 == pt {
+				if now%pt_by3 == pt {
 					_update_first_block()
+				}
+				if now%pt_by3 == pt*2 {
+					_update_last_block()
 				}
 			}
 		}

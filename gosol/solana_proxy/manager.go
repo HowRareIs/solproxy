@@ -52,13 +52,13 @@ func ClientManage(add *client.SOLClient, removeClientID uint64) bool {
 	return acted
 }
 
-func GetMinBlocks() (int, int) {
+func GetMinMaxBlocks() (int, int, int, int) {
 
 	mu.RLock()
 	defer mu.RUnlock()
 
 	// a public; b private
-	a, b := -1, -1
+	a, b, c, d := -1, -1, -1, -1
 	for _, v := range clients {
 		info := v.GetInfo()
 		if info.Is_disabled {
@@ -66,14 +66,20 @@ func GetMinBlocks() (int, int) {
 		}
 
 		if info.Is_public_node {
-			if a == -1 || info.First_available_block < a {
-				a = info.First_available_block
+			if a == -1 || info.Available_block_first > a {
+				a = info.Available_block_first
+			}
+			if c == -1 || info.Available_block_last < c {
+				c = info.Available_block_last
 			}
 		} else {
-			if b == -1 || info.First_available_block < b {
-				b = info.First_available_block
+			if b == -1 || info.Available_block_first > b {
+				b = info.Available_block_first
+			}
+			if d == -1 || info.Available_block_last < d {
+				d = info.Available_block_last
 			}
 		}
 	}
-	return a, b
+	return a, b, c, d
 }

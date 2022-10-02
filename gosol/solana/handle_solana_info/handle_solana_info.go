@@ -30,12 +30,16 @@ func (this *Handle_solana_info) HandleAction(action string, data *handler_socket
 	}
 
 	if action == "getSolanaInfo" {
-		pub, priv := solana_proxy.GetMinBlocks()
+		pub, priv, pub_max, priv_max := solana_proxy.GetMinMaxBlocks()
 
 		ret := map[string]interface{}{}
 		ret["first_available_block"] = map[string]string{
 			"public":  fmt.Sprintf("%d", pub),
 			"private": fmt.Sprintf("%d", priv)}
+
+		ret["last_available_block"] = map[string]string{
+			"public":  fmt.Sprintf("%d", pub_max),
+			"private": fmt.Sprintf("%d", priv_max)}
 
 		sch := solana_proxy.MakeScheduler()
 		if data.GetParamI("public", 0) == 1 {
@@ -90,7 +94,7 @@ func (this *Handle_solana_info) HandleAction(action string, data *handler_socket
 
 	if action == "getFirstAvailableBlock" {
 
-		pub, priv := solana_proxy.GetMinBlocks()
+		pub, priv, _, _ := solana_proxy.GetMinMaxBlocks()
 
 		ret := map[string]string{}
 		ret["public"] = fmt.Sprintf("%d", pub)

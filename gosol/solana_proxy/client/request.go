@@ -9,9 +9,8 @@ import (
 	"strings"
 )
 
-func (this *SOLClient) GetFirstAvailableBlock() (int, ResponseType) {
-
-	ret, r_type := this.RequestBasic("getFirstAvailableBlock")
+func (this *SOLClient) _intcall(method string) (int, ResponseType) {
+	ret, r_type := this.RequestBasic(method)
 	if ret == nil {
 		return 0, r_type
 	}
@@ -29,9 +28,17 @@ func (this *SOLClient) GetFirstAvailableBlock() (int, ResponseType) {
 		}
 		return int(_ret), r_type
 	default:
-		fmt.Println("Error in response for getFirstAvailableBlock: " + string(ret))
+		fmt.Println("Error in response for " + method + ": " + string(ret))
 	}
 	return 0, R_ERROR
+}
+
+func (this *SOLClient) GetFirstAvailableBlock() (int, ResponseType) {
+	return this._intcall("getFirstAvailableBlock")
+}
+
+func (this *SOLClient) GetLastAvailableBlock() (int, ResponseType) {
+	return this._intcall("getBlockHeight")
 }
 
 func (this *SOLClient) GetVersion() (int, int, string, ResponseType) {

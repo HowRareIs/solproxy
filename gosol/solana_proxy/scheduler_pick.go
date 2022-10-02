@@ -25,7 +25,7 @@ func (this *scheduler) _pick_next() *client.SOLClient {
 			continue
 		}
 
-		if this.min_block_no > -1 && this.min_block_no <= info.First_available_block {
+		if this.min_block_no > -1 && this.min_block_no <= info.Available_block_first {
 			continue
 		}
 

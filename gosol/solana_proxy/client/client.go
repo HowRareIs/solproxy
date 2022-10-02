@@ -37,7 +37,8 @@ type SOLClient struct {
 	client                *http.Client
 	endpoint              string
 	is_public_node        bool
-	first_available_block int
+	available_block_first int
+	available_block_last  int
 	is_disabled           bool
 
 	stat_running     int
@@ -57,13 +58,16 @@ type SOLClient struct {
 
 	_probe_time int
 	_probe_log  string
+
+	_last_error LastError
 }
 
 type Solclientinfo struct {
 	ID                    uint64
 	Endpoint              string
 	Is_public_node        bool
-	First_available_block int
+	Available_block_first int
+	Available_block_last  int
 	Is_disabled           bool
 	Is_throttled          bool
 
@@ -79,7 +83,8 @@ func (this *SOLClient) GetInfo() *Solclientinfo {
 	ret.ID = this.id
 	ret.Endpoint = this.endpoint
 	ret.Is_public_node = this.is_public_node
-	ret.First_available_block = this.first_available_block
+	ret.Available_block_first = this.available_block_first
+	ret.Available_block_last = this.available_block_last
 	ret.Is_disabled = this.is_disabled
 
 	tmp := throttle.ThrottleGoup(this.throttle).GetThrottleScore()

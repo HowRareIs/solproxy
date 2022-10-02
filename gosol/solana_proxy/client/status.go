@@ -108,14 +108,15 @@ func (this *SOLClient) GetStatus() string {
 	}
 
 	// Statistics
-	table := hscommon.NewTableGen("Time", "Requests", "Req/s", "Avg Time", "First Block",
+	table := hscommon.NewTableGen("Time", "Requests", "Req/s", "Avg Time", "First Block", "Last Block",
 		"Err JM", "Err Req", "Err Resp", "Err RResp", "Err Decode", "Sent", "Received")
 	table.SetClass("tab sol")
-	table.AddRow(_get_row("Last 10s", this._statsGetAggr(10), 10, "-")...)
-	table.AddRow(_get_row("Last 60s", this._statsGetAggr(59), 59, "-")...)
+	table.AddRow(_get_row("Last 10s", this._statsGetAggr(10), 10, "-", "-")...)
+	table.AddRow(_get_row("Last 60s", this._statsGetAggr(59), 59, "-", "-")...)
 
-	_fb := fmt.Sprintf("%d", this.first_available_block)
-	table.AddRow(_get_row("Total", this.stat_total, int(time_running), _fb)...)
+	_fb := fmt.Sprintf("%d", this.available_block_first)
+	_lb := fmt.Sprintf("%d", this.available_block_last)
+	table.AddRow(_get_row("Total", this.stat_total, int(time_running), _fb, _lb)...)
 	status += table.Render()
 
 	return status
