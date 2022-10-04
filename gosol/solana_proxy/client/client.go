@@ -33,13 +33,18 @@ func (this *SOLClient) SetAttr(attrs SOLClientAttr) {
 }
 
 type SOLClient struct {
-	id                    uint64
-	client                *http.Client
-	endpoint              string
-	is_public_node        bool
-	available_block_first int
-	available_block_last  int
-	is_disabled           bool
+	id                       uint64
+	client                   *http.Client
+	endpoint                 string
+	is_public_node           bool
+	available_block_first    int
+	available_block_first_ts int64
+	available_block_last     int
+	available_block_last_ts  int64
+
+	is_disabled       bool
+	is_paused         bool
+	is_paused_comment string
 
 	stat_running     int
 	stat_total       stat
@@ -49,6 +54,7 @@ type SOLClient struct {
 	version_major int
 	version_minor int
 	version       string
+	version_ts    int64
 
 	mu        sync.Mutex
 	serial_no uint64

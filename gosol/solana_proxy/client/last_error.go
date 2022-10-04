@@ -33,13 +33,14 @@ func isHTTPError(resp *http.Response, err error, post []byte) *LastError {
 	if err != nil {
 		tmp = append(tmp, "Error: "+err.Error())
 	}
-	if resp.StatusCode != 200 {
+
+	if resp != nil && resp.StatusCode != 200 {
 		tmp = append(tmp, "HTTP: "+resp.Status)
 	}
 	this.str = strings.Join(tmp, "\n")
 
 	tmp = tmp[:0]
-	if len(resp.Header) > 0 {
+	if resp != nil && len(resp.Header) > 0 {
 		tmp = append(tmp, "Response Headers:")
 		for k, v := range resp.Header {
 			tmp = append(tmp, k+": "+strings.Join(v, ", "))
@@ -48,11 +49,11 @@ func isHTTPError(resp *http.Response, err error, post []byte) *LastError {
 	}
 
 	body := []byte(nil)
-	if resp.Body != nil {
+	if resp != nil && resp.Body != nil {
 		body, _ = ioutil.ReadAll(resp.Body)
 	}
 	if body != nil {
-		tmp = append(tmp, "Body: "+string(body))
+		tmp = append(tmp, "Body:\n"+string(body))
 	} else {
 		tmp = append(tmp, "Body: -")
 	}
@@ -76,8 +77,12 @@ func isGenericError(err error, post []byte) *LastError {
 }
 
 func (this LastError) String() string {
-	tmp := fmt.Sprintf("Error %d @%s", this.counter, time.UnixMicro(this.call_ts).Format("2006-01-02 15:04:05")) + " / " + this.str + "\n"
-	tmp += "Request Data:" + this.call + "\n\n"
-	tmp += this.details
-	return tmp
+	header, details := this.Info()
+	return header + "\n" + details
+}
+
+func (this LastError) Info() (string, string) {
+	header := fmt.Sprintf("Error %d @%s", this.counter, time.UnixMicro(this.call_ts).Format("2006-01-02 15:04:05")) + " / " + this.str
+	details := "Request Data:" + this.call + "\n\n" + this.details
+	return header, details
 }

@@ -45,7 +45,7 @@ func (this *SOLClient) _maintenance() {
 	_update_version := func() {
 		_a, _b, _c, ok := this.GetVersion()
 		if ok != R_OK {
-			fmt.Println("Can't get version for: ", this.endpoint)
+			fmt.Println("Health: Can't get version for: ", this.endpoint)
 			return
 		}
 		this.mu.Lock()
@@ -54,27 +54,19 @@ func (this *SOLClient) _maintenance() {
 	}
 
 	_update_first_block := func() {
-		_b, _ok := this.GetFirstAvailableBlock()
+		_, _ok := this.GetFirstAvailableBlock()
 		if _ok != R_OK {
-			fmt.Println("Can't get first block for: ", this.endpoint)
+			fmt.Println("Health: Can't get first block for: ", this.endpoint)
 			return
 		}
-
-		this.mu.Lock()
-		this.available_block_first = _b
-		this.mu.Unlock()
 	}
 
 	_update_last_block := func() {
-		_b, _ok := this.GetLastAvailableBlock()
+		_, _ok := this.GetLastAvailableBlock()
 		if _ok != R_OK {
-			fmt.Println("Can't get last block for: ", this.endpoint)
+			fmt.Println("Health: Can't get last block for: ", this.endpoint)
 			return
 		}
-
-		this.mu.Lock()
-		this.available_block_last = _b
-		this.mu.Unlock()
 	}
 
 	// run first update, get all data required for the node to work!

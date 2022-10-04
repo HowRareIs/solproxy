@@ -84,6 +84,10 @@ table.main tr td:nth-child(odd)
 	background: #EEEEEE;
 }
 
+.lasterr {
+	color: saddlebrown;
+}
+
 table.main tr td:nth-child(even)
 {
 	background: #e1ffff; /* Old browsers */
@@ -168,7 +172,7 @@ table.main tr td
 
 .tooltip.sel
 {
-	background: black;
+	background: black!important;
 	color: white;
 }
 
@@ -231,7 +235,59 @@ table.compressing .running
 	background: #EEFFEE!important;
 }
 
+.node {
+	position: relative
+}
+.node .state {
+	left: 5px; top: 5px; position: absolute; font-size: 24px
+}
+.node .info {
+	padding: 5px;
+	padding-left: 35px;
+}
+.node .addl {
+	padding-left: 40px;
+	padding-bottom: 5px;
+}
+
+.node .addl span {
+	background: #444444;
+	color: #dddddd;
+	padding: 2px 5px;
+	cursor: pointer;
+	position: relative;
+}
+
+.node .addl span div {
+	position: absolute;
+	padding: 5px;
+	border: 2px solid #444444;
+	background: #444444;
+	color: #dddddd;
+	min-width: 300px;
+	left: 0px;
+	top: 100%;
+	display: none;
+}
+.node .addl span:hover div {
+	display: block;
+	z-index: 100;
+}
+
 </style>
+
+<!--<div class="node" style="background: #ddffdd">
+<div class="state" style="color: #229922">▶</div>
+<pre class='info'>
+Some info 1
+Some info 2
+Some info 3
+</pre>
+<div class="addl">
+	<span>Version 1.1.2<div>Version number</div></span>
+	<span>Version 1.1.2<div>Version number</div></span>
+</div>
+</div>-->
 
 <div class='container'>
 <h1>Server Status<i>##_version##, Listening on: ##_bound_to##</i></h1>

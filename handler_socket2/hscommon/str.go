@@ -37,6 +37,10 @@ func StrPostfixHTML(s string, to_len int, with string) string {
 
 func StrRealLen(s string) int {
 
+	if len(s) == 0 {
+		return 0
+	}
+
 	htmlTagStart := '<'
 	htmlTagEnd := '>'
 
@@ -91,4 +95,11 @@ func StrMessage(m string, is_ok bool) string {
 	} else {
 		return "<span style='color: #dd4444; font-family: monospace'> <b>⮿</b> " + m + "</span>"
 	}
+}
+
+func StrLimitLength(s string, max_len int) string {
+	if len(s) <= max_len {
+		return s
+	}
+	return s[0:max_len]
 }

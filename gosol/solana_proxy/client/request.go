@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"fmt"
+	"time"
 
 	"encoding/json"
 	"strconv"
@@ -34,11 +35,27 @@ func (this *SOLClient) _intcall(method string) (int, ResponseType) {
 }
 
 func (this *SOLClient) GetFirstAvailableBlock() (int, ResponseType) {
-	return this._intcall("getFirstAvailableBlock")
+	ret, r_type := this._intcall("getFirstAvailableBlock")
+	if r_type == R_OK {
+		_ts := time.Now().UnixMilli()
+		this.mu.Lock()
+		this.available_block_first = ret
+		this.available_block_first_ts = _ts
+		this.mu.Unlock()
+	}
+	return ret, r_type
 }
 
 func (this *SOLClient) GetLastAvailableBlock() (int, ResponseType) {
-	return this._intcall("getBlockHeight")
+	ret, r_type := this._intcall("getBlockHeight")
+	if r_type == R_OK {
+		_ts := time.Now().UnixMilli()
+		this.mu.Lock()
+		this.available_block_last = ret
+		this.available_block_last_ts = _ts
+		this.mu.Unlock()
+	}
+	return ret, r_type
 }
 
 func (this *SOLClient) GetVersion() (int, int, string, ResponseType) {
@@ -67,6 +84,12 @@ func (this *SOLClient) GetVersion() (int, int, string, ResponseType) {
 	tmp_chunks := strings.Split(tmp.Result.Solana_core, ".")
 	version_major, _ := strconv.Atoi(tmp_chunks[0])
 	version_minor, _ := strconv.Atoi(tmp_chunks[1])
+
+	_ts := time.Now().UnixMilli()
+	this.mu.Lock()
+	this.version = tmp.Result.Solana_core
+	this.version_ts = _ts
+	this.mu.Unlock()
 	return version_major, version_minor, tmp.Result.Solana_core, R_OK
 }
 
