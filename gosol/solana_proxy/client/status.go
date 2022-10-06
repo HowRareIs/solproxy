@@ -2,7 +2,9 @@ package client
 
 import (
 	"fmt"
+	node_status "gosol/solana_proxy/client/status"
 	"gosol/solana_proxy/client/throttle"
+	"html"
 	"time"
 
 	"github.com/slawomir-pryczek/handler_socket2/hscommon"
@@ -16,108 +18,96 @@ func init() {
 
 func (this *SOLClient) GetStatus() string {
 
-	_get_row := func(label string, s stat, time_running int, _addl ...string) []string {
-		_req := fmt.Sprintf("%d", s.stat_done)
-		_req_s := fmt.Sprintf("%.02f", float64(s.stat_done)/float64(time_running))
-		_req_avg := fmt.Sprintf("%.02f ms", (float64(s.stat_ns_total)/float64(s.stat_done))/1000.0)
+	status_throttle := throttle.ThrottleGoup(this.throttle).GetThrottleScore()
+	out, status_description := node_status.Create(this.is_paused, status_throttle.Throttled, this.is_disabled)
 
-		_r := make([]string, 0, 10)
-		_r = append(_r, label, _req, _req_s, _req_avg)
-		_r = append(_r, _addl...)
-
-		_r = append(_r, fmt.Sprintf("%d", s.stat_error_json_marshal))
-		_r = append(_r, fmt.Sprintf("%d", s.stat_error_req))
-		_r = append(_r, fmt.Sprintf("%d", s.stat_error_resp))
-		_r = append(_r, fmt.Sprintf("%d", s.stat_error_resp_read))
-		_r = append(_r, fmt.Sprintf("%d", s.stat_error_json_decode))
-
-		_r = append(_r, fmt.Sprintf("%.02fMB", float64(s.stat_bytes_sent)/1000/1000))
-		_r = append(_r, fmt.Sprintf("%.02fMB", float64(s.stat_bytes_received)/1000/1000))
-		return _r
-	}
-
-	time_running := time.Now().Unix() - start_time
-
-	this.mu.Lock()
-	defer this.mu.Unlock()
-
-	// Node type
-	status := ""
-	_t := "Private"
-	if this.is_public_node {
-		_t = "Public"
-	}
-
-	// Health status
-	node_stats := ""
+	// Node name and status description
 	{
-		node_health := ""
-		if this.is_disabled {
-			node_health = hscommon.StrMessage("Node is not healthy, recent requests failed", false)
-		} else {
-			node_health = hscommon.StrMessage("Node is healthy and can process requests", true)
+		header := ""
+		_t := "Private"
+		if this.is_public_node {
+			_t = "Public"
 		}
-		node_health = hscommon.StrPostfixHTML(node_health, 80, " ")
-		node_health += this._probe_log
-		node_stats += node_health + "\n"
+		_e := this.endpoint
+		_util := fmt.Sprintf("%.02f%%", float64(status_throttle.CapacityUsed)/100.0)
+		header += fmt.Sprintf("<b>%s Node #%d</b>, Score: %d, Utilization: %s, %s\n", _t, this.id, status_throttle.Score, _util, _e)
+		header += status_description
+		header += "\n"
+		header += this._probe_log
+		out.SetHeader(header)
 	}
 
-	// Future status
+	// Add basic badges
+	if len(this.version) > 0 {
+		out.AddBadge("Version: "+this.version, node_status.Gray, "Version number was updated on: "+time.UnixMilli(this.version_ts).Format("2006-01-02 15:04:05"))
+	}
+	out.AddBadge(fmt.Sprintf("%d Requests Running", this.stat_running), node_status.Gray, "Number of requests currently being processed.")
+	if this._probe_time >= 10 {
+		out.AddBadge("Conserve Requests", node_status.Green, "Health checks are limited for\nthis node to conserve requests.\n\nIf you're paying per-request\nit's good to enable this mode.")
+	}
+
+	// show last error if we have any
+	if this._last_error.counter > 0 {
+		last_error_header, last_error_details := this._last_error.Info()
+		_comment := html.EscapeString(last_error_header) + "\n" + html.EscapeString(last_error_details)
+		out.AddBadge(fmt.Sprintf("Has Errors: %d", this._last_error.counter), node_status.Red, _comment)
+	}
+
+	// Next health badge
 	{
-		future_status := ""
-		_dead, _, _, _comment := this._statsIsDead()
+		_dead, r, e, _comment := this._statsIsDead()
+		_comment = "Node status which will be applied during the next update:\n" + _comment
 		if _dead {
-			future_status = fmt.Sprintf("New health status will be: Not Healthy ")
+			out.AddBadge(fmt.Sprintf("Predicted Not Healthy (%dR/%dE)", r, e), node_status.Red, _comment)
 		} else {
-			future_status = fmt.Sprintf("New health status is: Healthy ")
+			out.AddBadge(fmt.Sprintf("Predicted Healthy (%dR/%dE)", r, e), node_status.Green, _comment)
 		}
-		future_status = hscommon.StrMessage(future_status, !_dead)
-		future_status = hscommon.StrPostfixHTML(future_status, 80, " ")
-		future_status += _comment
-		node_stats += future_status
 	}
 
-	// Throttle status
-	node_stats_raw := throttle.ThrottleGoup(this.throttle).GetThrottleScore()
-
-	_id := fmt.Sprint("#", this.id)
-	status += "\n"
-	status += "<b>" + _t + " Node " + _id + ", Endpoint</b> " + this.endpoint + " <i>v" + this.version + "</i>"
-	status += fmt.Sprintf(" ... Requests running now: %d ... ", this.stat_running)
-
-	// Utilization + conserve requests
+	// Generate content (throttle settings)
 	{
-		util := fmt.Sprintf("<b>Σ</b> Utilization: %.02f%%, Score: %d",
-			float64(node_stats_raw.CapacityUsed)/100.0, node_stats_raw.Score)
-		if node_stats_raw.CapacityUsed == 10000 {
-			util = "<b style='color: #dd4444'>" + util + "</b>"
-		} else {
-			util = "<b style='color: #449944'>" + util + "</b>"
+		content := ""
+		for _, throttle := range this.throttle {
+			content += throttle.GetStatus()
 		}
-
-		conserve_requests := ""
-		if this._probe_time >= 10 {
-			conserve_requests = "<span class='tooltip' style='color: #8B4513'> (?)Conserve Requests <div>Health checks are limited for\nthis node to conserve requests.\n\nIf you're paying per-request it's good\nto enable this mode</div></span>"
-		}
-		status += util + conserve_requests + "\n"
+		out.AddContent(content)
 	}
 
-	status += node_stats
-	for _, throttle := range this.throttle {
-		status += throttle.GetStatus()
+	// Requests statistics
+	{
+		_get_row := func(label string, s stat, time_running int, _addl ...string) []string {
+			_req := fmt.Sprintf("%d", s.stat_done)
+			_req_s := fmt.Sprintf("%.02f", float64(s.stat_done)/float64(time_running))
+			_req_avg := fmt.Sprintf("%.02f ms", (float64(s.stat_ns_total)/float64(s.stat_done))/1000.0)
+
+			_r := make([]string, 0, 10)
+			_r = append(_r, label, _req, _req_s, _req_avg)
+			_r = append(_r, _addl...)
+
+			_r = append(_r, fmt.Sprintf("%d", s.stat_error_json_marshal))
+			_r = append(_r, fmt.Sprintf("%d", s.stat_error_req))
+			_r = append(_r, fmt.Sprintf("%d", s.stat_error_resp))
+			_r = append(_r, fmt.Sprintf("%d", s.stat_error_resp_read))
+			_r = append(_r, fmt.Sprintf("%d", s.stat_error_json_decode))
+
+			_r = append(_r, fmt.Sprintf("%.02fMB", float64(s.stat_bytes_sent)/1000/1000))
+			_r = append(_r, fmt.Sprintf("%.02fMB", float64(s.stat_bytes_received)/1000/1000))
+			return _r
+		}
+		// Statistics
+		table := hscommon.NewTableGen("Time", "Requests", "Req/s", "Avg Time", "First Block", "Last Block",
+			"Err JM", "Err Req", "Err Resp", "Err RResp", "Err Decode", "Sent", "Received")
+		table.SetClass("tab sol")
+		table.AddRow(_get_row("Last 10s", this._statsGetAggr(10), 10, "-", "-")...)
+		table.AddRow(_get_row("Last 60s", this._statsGetAggr(60), 60, "-", "-")...)
+
+		_fb := fmt.Sprintf("%d", this.available_block_first)
+		_lb := fmt.Sprintf("%d", this.available_block_last)
+
+		time_running := time.Now().Unix() - start_time
+		table.AddRow(_get_row("Total", this.stat_total, int(time_running), _fb, _lb)...)
+		out.AddContent(table.Render())
 	}
 
-	// Statistics
-	table := hscommon.NewTableGen("Time", "Requests", "Req/s", "Avg Time", "First Block", "Last Block",
-		"Err JM", "Err Req", "Err Resp", "Err RResp", "Err Decode", "Sent", "Received")
-	table.SetClass("tab sol")
-	table.AddRow(_get_row("Last 10s", this._statsGetAggr(10), 10, "-", "-")...)
-	table.AddRow(_get_row("Last 60s", this._statsGetAggr(59), 59, "-", "-")...)
-
-	_fb := fmt.Sprintf("%d", this.available_block_first)
-	_lb := fmt.Sprintf("%d", this.available_block_last)
-	table.AddRow(_get_row("Total", this.stat_total, int(time_running), _fb, _lb)...)
-	status += table.Render()
-
-	return status
+	return "\n" + out.Render()
 }
