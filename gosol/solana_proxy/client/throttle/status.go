@@ -2,6 +2,7 @@ package throttle
 
 import (
 	"fmt"
+	"github.com/slawomir-pryczek/handler_socket2/hscommon"
 	"strings"
 )
 
@@ -21,14 +22,17 @@ func (this *Throttle) GetStatus() string {
 		return ret
 	}
 
-	status := "<span style='color: #449944; font-family: monospace'> <b>⬤</b> Throttling disabled (##layout##) ⏵︎⏵︎⏵︎</span>\n"
+	status := "<span style='color: #449944; font-family: monospace'> <b>⬤</b> Throttling disabled (##layout##) ⏵︎⏵︎⏵︎</span>"
 	if (len(this.limiters) > 0) && this.status_throttled {
-		status = "<span style='color: #dd4444; font-family: monospace'> <b>⮿</b> Throttling enabled (##layout##), node is throttled</span>\n"
+		status = "<span style='color: #dd4444; font-family: monospace'> <b>⮿</b> Throttling group (##layout##), exhausted</span>"
 	}
 	if (len(this.limiters) > 0) && !this.status_throttled {
-		status = "<span style='color: #449944; font-family: monospace'> <b>⬤</b> Throttling enabled (##layout##), node is NOT throttled</span>\n"
+		status = "<span style='color: #449944; font-family: monospace'><b>⬤</b> Throttling group (##layout##)</span>"
 	}
 	status = strings.Replace(status, "##layout##", fmt.Sprintf("%dx%ds", len(this.stats), this.stats_window_size_seconds), 1)
+
+	status = hscommon.StrPostfixHTML(status, 80, " ")
+	status += fmt.Sprintf("Group Score: %d (Modifier: %d)\n", this.status_score, this.score_modifier)
 
 	for k, _ := range this.limiters {
 		v := &this.limiters[k]
@@ -41,7 +45,9 @@ func (this *Throttle) GetStatus() string {
 		}
 
 		_s := v.in_time_windows * this.stats_window_size_seconds
-		thr_status := fmt.Sprintf("  Throtting #%d: %d second(s), maximum %d %s", k, _s, v.maximum, _type)
+		thr_status := fmt.Sprintf("Throtting #%d: %d second(s), maximum %d %s", k, _s, v.maximum, _type)
+		thr_status = hscommon.StrPostfix(thr_status, 80, " ")
+
 		if len(thr_status) < 80 {
 			thr_status += strings.Repeat(" ", 80-len(thr_status))
 		}
@@ -57,23 +63,10 @@ func (this *Throttle) GetStatus() string {
 		thr_status += _progress(_perc/100) + "\t"
 		thr_status += fmt.Sprintf("<span style='color: %s; font-family: monospace'><b>%s</b> %d/%d (%.01f%%) <i>+%d</i></span>\n",
 			color, symbol, _amt, v.maximum, float64(_perc)/100.0, _perc)
-
 		status += thr_status
 	}
 
-	adj := fmt.Sprintf("%d", this.score_modifier)
-	if this.score_modifier > 0 {
-		adj = "+" + adj
-	}
-
-	_sc := fmt.Sprintf(" Node Score (lowest is better) = %d", this.status_score)
-	_adj := fmt.Sprintf("<span style='color: gray; font-family: monospace'>Score modifier is %s</span>\n", adj)
-	if len(_sc) < 80 {
-		_adj = strings.Repeat(" ", 80-len(_sc)) + _adj
-	}
-	status += _sc + _adj
-
-	return "<pre>" + status + "</pre>"
+	return status
 }
 
 func (this *Throttle) GetLimitsLeft() (int, int, int, int) {

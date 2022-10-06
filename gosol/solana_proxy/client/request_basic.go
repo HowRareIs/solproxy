@@ -126,9 +126,12 @@ func (this *SOLClient) RequestBasic(method_param ...string) ([]byte, ResponseTyp
 	}
 
 	resp_body := this._docall(now, post)
+	if resp_body == nil {
+		// response was nil, error already accounted
+		return nil, R_ERROR
+	}
 	if !bytes.Contains(resp_body, []byte(serial)) {
-
-		fmt.Println(">ERROR IN RESPONSE>", string(resp_body))
+		fmt.Println(">ERROR IN DECODING RESPONSE>", string(resp_body))
 		this.mu.Lock()
 		this.stat_total.stat_error_resp++
 		this.stat_last_60[this.stat_last_60_pos].stat_error_resp++

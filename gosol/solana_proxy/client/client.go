@@ -8,20 +8,6 @@ import (
 	"time"
 )
 
-type stat struct {
-	stat_error_req          int
-	stat_error_resp         int
-	stat_error_resp_read    int
-	stat_error_json_decode  int
-	stat_error_json_marshal int
-	stat_done               int
-	stat_ns_total           uint64
-
-	stat_request_by_fn  map[string]int
-	stat_bytes_received int
-	stat_bytes_sent     int
-}
-
 type SOLClientAttr int
 
 const (

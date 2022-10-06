@@ -12,7 +12,7 @@ const (
 	LGray          = "#aaaaaa"
 
 	Red    string = "#dd4444"
-	Green         = "#44dd44"
+	Green         = "#449944"
 	Yellow        = "#dddd44"
 	Gray          = "#666666"
 )
@@ -28,7 +28,7 @@ type Status struct {
 	badge_color []string
 	badge_info  []string
 
-	footer string
+	content string
 }
 
 func Create(is_paused, is_throttled, is_unhealthy bool) (*Status, string) {
@@ -60,12 +60,10 @@ func Create(is_paused, is_throttled, is_unhealthy bool) (*Status, string) {
 func (this *Status) SetHeader(content string) {
 	this.header = content
 }
+func (this *Status) AddContent(content string) {
+	this.content += content
+}
 func (this *Status) AddBadge(text, color, info string) {
-
-	if color == Green {
-		color = "#449944"
-	}
-
 	this.badge = append(this.badge, text)
 	this.badge_color = append(this.badge_color, color)
 	this.badge_info = append(this.badge_info, info)
@@ -84,5 +82,10 @@ func (this *Status) Render() string {
 	}
 	out = append(out, "</div>")
 	out = append(out, "</div>")
+
+	out = append(out, "<pre style='padding-left: 30px'>")
+	out = append(out, this.content)
+	out = append(out, "</pre>")
+
 	return strings.Join(out, "")
 }

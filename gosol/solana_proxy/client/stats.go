@@ -4,6 +4,20 @@ import (
 	"fmt"
 )
 
+type stat struct {
+	stat_error_req          int
+	stat_error_resp         int
+	stat_error_resp_read    int
+	stat_error_json_decode  int
+	stat_error_json_marshal int
+	stat_done               int
+	stat_ns_total           uint64
+
+	stat_request_by_fn  map[string]int
+	stat_bytes_received int
+	stat_bytes_sent     int
+}
+
 func (this *SOLClient) _statsGetAggr(seconds int) stat {
 
 	s := stat{}
@@ -51,6 +65,8 @@ func (this *SOLClient) _statsIsDead() (bool, int, int, string) {
 	for i := 0; i < probe_isalive_seconds; i++ {
 		stat_requests += this.stat_last_60[_pos].stat_done
 		stat_errors += this.stat_last_60[_pos].stat_error_resp
+		stat_errors += this.stat_last_60[_pos].stat_error_resp_read
+		stat_errors += this.stat_last_60[_pos].stat_error_json_decode
 
 		_pos-- // take current second into account
 		if _pos < 0 {

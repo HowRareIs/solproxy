@@ -7,7 +7,7 @@ import (
 func _prefix_gen(s string, to_len int, with string) string {
 
 	if len(s) >= to_len {
-		return s
+		return ""
 	}
 
 	_r := to_len - len(s)
