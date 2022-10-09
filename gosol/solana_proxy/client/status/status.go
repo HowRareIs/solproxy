@@ -10,11 +10,13 @@ const (
 	LGreen         = "#ddffdd"
 	LYellow        = "#ffffdd"
 	LGray          = "#aaaaaa"
+	LOrange        = "#ffa500"
 
 	Red    string = "#dd4444"
 	Green         = "#449944"
 	Yellow        = "#dddd44"
 	Gray          = "#666666"
+	Orange        = "#cc6a00"
 )
 
 type Status struct {

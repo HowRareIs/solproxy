@@ -63,12 +63,12 @@ func (this *scheduler) GetPublicClient() *client.SOLClient {
 	return ret
 }
 
-func (this *scheduler) GetAll(is_public bool, include_disabled bool) []*client.SOLClient {
+func (this *scheduler) GetAll(is_public bool, include_deactivated bool) []*client.SOLClient {
 
 	ret := make([]*client.SOLClient, 0, len(this.clients))
 	for _, v := range this.clients {
 		info := v.GetInfo()
-		if info.Is_disabled && include_disabled == false {
+		if (info.Is_disabled || info.Is_throttled || info.Is_paused) && include_deactivated == false {
 			continue
 		}
 

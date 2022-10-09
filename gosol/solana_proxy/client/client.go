@@ -18,6 +18,15 @@ func (this *SOLClient) SetAttr(attrs SOLClientAttr) {
 	this.attr = attrs
 }
 
+func (this *SOLClient) SetPaused(paused bool, comment string) {
+	this.mu.Lock()
+	this.is_paused = paused
+	if this.is_paused {
+		this.is_paused_comment = comment
+	}
+	this.mu.Unlock()
+}
+
 type SOLClient struct {
 	id                       uint64
 	client                   *http.Client
@@ -55,16 +64,27 @@ type SOLClient struct {
 }
 
 type Solclientinfo struct {
-	ID                    uint64
-	Endpoint              string
-	Is_public_node        bool
-	Available_block_first int
-	Available_block_last  int
-	Is_disabled           bool
-	Is_throttled          bool
+	ID                       uint64
+	Endpoint                 string
+	Is_public_node           bool
+	Available_block_first    int
+	Available_block_first_ts int64
+	Available_block_last     int
+	Available_block_last_ts  int64
+	Is_disabled              bool
+	Is_throttled             bool
+	Is_paused                bool
 
 	Attr  SOLClientAttr
 	Score int
+}
+
+func (this *SOLClient) GetEndpoint() string {
+	this.mu.Lock()
+	ret := this.endpoint
+	this.mu.Unlock()
+
+	return ret
 }
 
 func (this *SOLClient) GetInfo() *Solclientinfo {
@@ -76,8 +96,11 @@ func (this *SOLClient) GetInfo() *Solclientinfo {
 	ret.Endpoint = this.endpoint
 	ret.Is_public_node = this.is_public_node
 	ret.Available_block_first = this.available_block_first
+	ret.Available_block_first_ts = this.available_block_first_ts
 	ret.Available_block_last = this.available_block_last
+	ret.Available_block_last_ts = this.available_block_last_ts
 	ret.Is_disabled = this.is_disabled
+	ret.Is_paused = this.is_paused
 
 	tmp := throttle.ThrottleGoup(this.throttle).GetThrottleScore()
 	ret.Score = tmp.Score

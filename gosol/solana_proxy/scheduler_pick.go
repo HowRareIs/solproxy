@@ -13,7 +13,7 @@ func (this *scheduler) _pick_next() *client.SOLClient {
 		}
 
 		info := v.GetInfo()
-		if info.Is_disabled {
+		if info.Is_disabled || info.Is_throttled || info.Is_paused {
 			this.clients[num] = nil
 			continue
 		}

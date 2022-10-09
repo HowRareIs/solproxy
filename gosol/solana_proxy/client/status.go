@@ -50,7 +50,7 @@ func (this *SOLClient) GetStatus() string {
 	if this._last_error.counter > 0 {
 		last_error_header, last_error_details := this._last_error.Info()
 		_comment := html.EscapeString(last_error_header) + "\n" + html.EscapeString(last_error_details)
-		out.AddBadge(fmt.Sprintf("Has Errors: %d", this._last_error.counter), node_status.Red, _comment)
+		out.AddBadge(fmt.Sprintf("Has Errors: %d", this._last_error.counter), node_status.Orange, _comment)
 	}
 
 	// Next health badge
@@ -61,6 +61,19 @@ func (this *SOLClient) GetStatus() string {
 			out.AddBadge(fmt.Sprintf("Predicted Not Healthy (%dR/%dE)", r, e), node_status.Red, _comment)
 		} else {
 			out.AddBadge(fmt.Sprintf("Predicted Healthy (%dR/%dE)", r, e), node_status.Green, _comment)
+		}
+	}
+
+	// Paused status
+	{
+		if this.is_paused {
+			_p := "Node is paused"
+			if len(this.is_paused_comment) > 0 {
+				_p += ", reason:\n" + this.is_paused_comment
+			} else {
+				_p += ", no additional info present"
+			}
+			out.AddBadge("Paused", node_status.Gray, _p)
 		}
 	}
 

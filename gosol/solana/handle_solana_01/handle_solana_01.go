@@ -1,6 +1,7 @@
 package handle_solana_01
 
 import (
+	"fmt"
 	"gosol/solana_proxy"
 	"gosol/solana_proxy/client"
 
@@ -49,7 +50,7 @@ func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.
 				cl = sch.GetAnyClient()
 			}
 			if cl == nil {
-				break
+				return `{"error":"can't find appropriate client (2)"}`
 			}
 			ret, result = cl.GetBlock(block_no)
 		}
@@ -70,7 +71,7 @@ func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.
 				cl = sch.GetAnyClient()
 			}
 			if cl == nil {
-				break
+				return `{"error":"can't find appropriate client (2)"}`
 			}
 
 			ret, result = cl.GetTransaction(hash)
@@ -94,7 +95,7 @@ func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.
 				cl = sch.GetAnyClient()
 			}
 			if cl == nil {
-				break
+				return `{"error":"can't find appropriate client (2)"}`
 			}
 			ret, result = cl.SimpleCall(action, pubkey, commitment)
 		}
