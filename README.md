@@ -13,7 +13,7 @@ It allows to:
 - Automatically re-do failed requests on different node if they timed-out or returned an error
 
 What's new in Solproxy 0.2?
-- Genesys support, see [adding genesys node](doc/GENESYS.md)
+- GenesysGo support, see [adding GenesysGo node](doc/GENESYS.md)
 - Health check for pausing lagging nodes, see [setup instructions](doc/HEALTH_CHECK.md)
 - Updated dashboard UI
 - Allow to throttle using any time interval (eg. cap requests daily or per second)
