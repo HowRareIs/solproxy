@@ -30,4 +30,4 @@ Notes:
 </p>
 
 ## Adding node
-After you have authentication running you should be able to add your genesys node normally. Authentication settings will be matched to GenesysGo node by your client_id
+After you have authentication running you should be able to add your GenesysGo node normally. Authentication settings will be matched to GenesysGo node by your client_id
