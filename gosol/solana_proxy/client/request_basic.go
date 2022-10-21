@@ -3,9 +3,11 @@ package client
 import (
 	"bytes"
 	"fmt"
+	"gosol/handle_kvstore"
 	"gosol/solana_proxy/client/throttle"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"encoding/json"
@@ -17,12 +19,7 @@ const (
 	R_OK        ResponseType = 0
 	R_ERROR                  = 1
 	R_THROTTLED              = 2
-	R_REDO                   = 50
 )
-
-const FORWARD_OK = 0
-const FORWARD_ERROR = 1
-const FORWARD_THROTTLE = 10
 
 func (this *SOLClient) RequestForward(body []byte) (ResponseType, []byte) {
 
@@ -153,6 +150,25 @@ func (this *SOLClient) _docall(ts_started int64, post []byte) []byte {
 	}
 
 	req.Header.Add("Content-Type", "application/json")
+
+	// Genesys authorization support
+	if pos := strings.Index(this.endpoint, ".genesysgo.net"); pos > -1 {
+		for pos < len(this.endpoint) && this.endpoint[pos] != '/' {
+			pos++
+		}
+		if pos < len(this.endpoint) {
+			pos++
+		}
+		client_id := this.endpoint[pos:]
+		token := []byte(nil)
+		if len(client_id) > 0 {
+			token = handle_kvstore.KeyGet("genesys-"+client_id, nil)
+		}
+		if token != nil {
+			req.Header.Add("Authorization", "Bearer "+string(token))
+		}
+	}
+
 	resp, err := this.client.Do(req)
 	if resp != nil {
 		defer resp.Body.Close()
