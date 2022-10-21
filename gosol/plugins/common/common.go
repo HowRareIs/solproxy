@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -11,7 +12,8 @@ type pluginInterface interface {
 }
 
 func (this *Plugin) Status() string {
-	return this.p.Status()
+	ret := fmt.Sprintf("Run: %d, Check: %d, Skipped: %d\n", this.counter_run, this.counter_check, this.counter_skip)
+	return ret + this.p.Status()
 }
 
 func (this *Plugin) Run() bool {
@@ -36,9 +38,11 @@ func (this *Plugin) Run() bool {
 	this.mu.Lock()
 	if _r {
 		this.last_run_time = now
+		this.counter_run++
+	} else {
+		this.counter_check++
 	}
 	this.is_running = false
-	this.counter_run++
 	this.mu.Unlock()
 	return true
 }
@@ -47,9 +51,10 @@ type Plugin struct {
 	p  pluginInterface
 	mu sync.Mutex
 
-	is_running   bool
-	counter_run  int
-	counter_skip int
+	is_running    bool
+	counter_check int
+	counter_run   int
+	counter_skip  int
 
 	last_run_time int64
 }

@@ -1,6 +1,7 @@
 package plugin_manager
 
 import (
+	"github.com/slawomir-pryczek/handler_socket2"
 	"gosol/plugins/common"
 	"gosol/plugins/genesys"
 	"sync"
@@ -51,4 +52,20 @@ func RegisterAll() {
 		register(tmp)
 	}
 
+	handler_socket2.StatusPluginRegister(func() (string, string) {
+		ret := ""
+		mu.Lock()
+		_plugins := make([]*common.Plugin, len(plugins))
+		copy(_plugins, plugins)
+		mu.Unlock()
+
+		if len(_plugins) == 0 {
+			ret = "No plugins installed!"
+		}
+		for _, p := range _plugins {
+			ret += p.Status() + "\n"
+		}
+
+		return "Plugins", "<pre>" + ret + "</pre>"
+	})
 }

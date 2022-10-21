@@ -4,7 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/slawomir-pryczek/handler_socket2/config"
+	"github.com/slawomir-pryczek/handler_socket2/hscommon"
+	"gosol/handle_kvstore"
 	"gosol/plugins/common"
+	"strings"
+	"time"
 )
 
 const rpc_url = "https://portal.genesysgo.net/api"
@@ -14,7 +18,8 @@ type Genesys struct {
 	public_key     string
 	signed_message string
 
-	comment string
+	comment         string
+	last_updated_ts int64
 }
 
 func Init(config_attr string) *common.Plugin {
@@ -58,10 +63,13 @@ func Init(config_attr string) *common.Plugin {
 
 func (this *Genesys) Run(age_ms int) bool {
 
-	// refresh token every hour
-	if age_ms > 3600*1000 || age_ms == -1 {
+	// refresh token every 2 hours
+	if age_ms > 3600*2000 || age_ms == -1 {
 		_t := this._getToken(this.client_id)
 		if len(_t.token) > 0 {
+			this.comment = "Received token " + hscommon.StrMidChars(_t.token, 5)
+			this.last_updated_ts = time.Now().Unix()
+			handle_kvstore.KeySet(fmt.Sprintf("genesys-%s", this.client_id), []byte(_t.token), 0, true)
 			return true
 		}
 
@@ -71,66 +79,17 @@ func (this *Genesys) Run(age_ms int) bool {
 }
 
 func (this *Genesys) Status() string {
-	return "X"
-}
 
-func GetToken() error {
+	ret := make([]string, 0, 20)
+	ret = append(ret, fmt.Sprintf("Genesys plugin for Client ID: %s", this.client_id))
+	ret = append(ret, fmt.Sprintf(" Signed message: %s", hscommon.StrMidChars(this.signed_message, 3)))
+	ret = append(ret, fmt.Sprintf(" Comment: %s", this.comment))
 
-	/*pk, err := solana.PrivateKeyFromBase58("4rZGkEjJ8qcFN7riSZ1V5XcLVoKvsJSPNMVdhsav2BZ9kVbZMxvBxGCAfx5tkc1Ej5Kix1WxNQ2LbhA5fUkwzR4P")
-	fmt.Println("Authenticating using PK, Public: ", pk.PublicKey())
-	if err != nil {
-		return err
+	_age_s := "Never"
+	if this.last_updated_ts != 0 {
+		_age := time.Now().Unix() - this.last_updated_ts
+		_age_s = hscommon.FormatTime(int(_age)) + " ago"
 	}
-
-	signed_message, err2 := pk.Sign([]byte("Sign in to GenesysGo Shadow Platform."))
-	fmt.Println("Signed message: ", signed_message)
-	if err2 != nil {
-		return err2
-	}*/
-	/*
-		body := "{'message':'" + signed_message.String() + "','signer':'" + pk.PublicKey().String() + "'}"
-		body = strings.Replace(body, "'", "\"", 999)
-		fmt.Println(body)
-
-		resp, err3 := http.Post(rpc_url+"/signin", "application/json", bytes.NewBuffer([]byte(body)))
-		if err3 != nil {
-			return err3
-		}
-
-		var res map[string]interface{}
-		err4 := json.NewDecoder(resp.Body).Decode(&res)
-		if err4 != nil {
-			return err4
-		}
-
-		token := ""
-		switch res["token"].(type) {
-		case string:
-			token = res["token"].(string)
-		default:
-			return errors.New("Cannot read token (1)")
-		}
-		if len(token) == 0 {
-			return errors.New("Token is empty!")
-		}
-
-		client := &http.Client{}
-		req, _ := http.NewRequest("POST", rpc_url+"/premium/token/c26fe6cb-a2be-4f61-b1de-84823e68572e", nil)
-		req.Header.Add("Authorization", "Bearer "+token+"")
-
-		fmt.Println(res)
-		fmt.Println("Auth Token: ", token)
-
-		fmt.Println("---------->>><<<<-----------")
-		resp, err5 := (client.Do(req))
-		if err5 != nil {
-			return err5
-		}
-		err6 := json.NewDecoder(resp.Body).Decode(&res)
-		if err6 != nil {
-			return err6
-		}
-		fmt.Println(res)
-	*/
-	return nil
+	ret = append(ret, fmt.Sprintf(" Last Successfull Update: %s", _age_s))
+	return strings.Join(ret, "\n")
 }

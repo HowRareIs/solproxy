@@ -49,6 +49,7 @@ func _signMessage(privatekey string) (string, string) {
 func (this *Genesys) _getToken(client_id string) (ret _gt) {
 	defer func() {
 		if err := recover(); err != nil {
+			ret.token = ""
 			ret.error_comment = "Error getting genesys token"
 		}
 	}()
@@ -98,7 +99,5 @@ func (this *Genesys) _getToken(client_id string) (ret _gt) {
 
 	ret.error_comment = ""
 	ret.token = res["token"].(string)
-	x := res["token"].(int)
-	fmt.Println(">>>>", x)
 	return
 }
