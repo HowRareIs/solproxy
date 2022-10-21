@@ -1,4 +1,4 @@
-package handler_socket2
+package config
 
 import (
 	"bytes"
