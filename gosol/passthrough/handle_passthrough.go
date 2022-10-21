@@ -2,6 +2,7 @@ package handle_passthrough
 
 import (
 	"encoding/json"
+	"github.com/slawomir-pryczek/handler_socket2/config"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -26,7 +27,7 @@ func (this *Handle_passthrough) GetActions() []string {
 
 func (this *Handle_passthrough) HandleAction(action string, data *handler_socket2.HSParams) string {
 
-	pt_url := handler_socket2.Config().Get("PASSTHROUGH_URL", "")
+	pt_url := config.Config().Get("PASSTHROUGH_URL", "")
 	if len(pt_url) == 0 {
 		return "Please specify PASSTHROUGH_URL"
 	}

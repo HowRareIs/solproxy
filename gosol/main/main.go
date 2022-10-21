@@ -1,26 +1,27 @@
 package main
 
 import (
+	"fmt"
+	"github.com/slawomir-pryczek/handler_socket2"
+	"github.com/slawomir-pryczek/handler_socket2/config"
+	"github.com/slawomir-pryczek/handler_socket2/handle_echo"
+	"github.com/slawomir-pryczek/handler_socket2/handle_profiler"
+	"gosol/handle_kvstore"
 	"gosol/passthrough"
+	plugin_manager "gosol/plugins"
 	"gosol/solana/handle_solana_01"
 	"gosol/solana/handle_solana_admin"
 	"gosol/solana/handle_solana_info"
 	"gosol/solana/handle_solana_raw"
+	"os"
 	"runtime"
 	"strings"
-
-	"github.com/slawomir-pryczek/handler_socket2"
-	"github.com/slawomir-pryczek/handler_socket2/handle_echo"
-	"github.com/slawomir-pryczek/handler_socket2/handle_profiler"
-
-	"fmt"
-	"os"
 )
 
 func _read_node_config() {
 
 	fmt.Println("\nReading node config...")
-	nodes := (handler_socket2.Config().GetRawData("SOL_NODES", "")).([]interface{})
+	nodes := (config.Config().GetRawData("SOL_NODES", "")).([]interface{})
 	if len(nodes) <= 0 {
 		fmt.Println("ERROR: No nodes defined, please define at least one solana node to connect to")
 		os.Exit(10)
@@ -34,6 +35,8 @@ func _read_node_config() {
 }
 
 func main() {
+
+	plugin_manager.RegisterAll()
 	_read_node_config()
 
 	num_cpu := runtime.NumCPU() * 2
@@ -46,10 +49,11 @@ func main() {
 	handlers = append(handlers, &handle_solana_info.Handle_solana_info{})
 	handlers = append(handlers, &handle_passthrough.Handle_passthrough{})
 	handlers = append(handlers, &handle_solana_admin.Handle_solana_admin{})
+	handlers = append(handlers, &handle_kvstore.Handle_kvstore{})
 
-	if len(handler_socket2.Config().Get("RUN_SERVICES", "")) > 0 && handler_socket2.Config().Get("RUN_SERVICES", "") != "*" {
+	if len(config.Config().Get("RUN_SERVICES", "")) > 0 && config.Config().Get("RUN_SERVICES", "") != "*" {
 		_h_modified := []handler_socket2.ActionHandler{}
-		_tmp := strings.Split(handler_socket2.Config().Get("RUN_SERVICES", ""), ",")
+		_tmp := strings.Split(config.Config().Get("RUN_SERVICES", ""), ",")
 		supported := make(map[string]bool)
 		for _, v := range _tmp {
 			supported[strings.Trim(v, "\r\n \t")] = true
@@ -74,5 +78,5 @@ func main() {
 
 	// start the server
 	handler_socket2.RegisterHandler(handlers...)
-	handler_socket2.StartServer(strings.Split(handler_socket2.Config().Get("BIND_TO", ""), ","))
+	handler_socket2.StartServer(strings.Split(config.Config().Get("BIND_TO", ""), ","))
 }

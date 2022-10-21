@@ -1,5 +1,7 @@
 package client
 
+/* This file adds support for requests on higher level, without error processing */
+
 import (
 	"bytes"
 	"fmt"
@@ -95,7 +97,7 @@ func (this *SOLClient) GetVersion() (int, int, string, ResponseType) {
 
 func (this *SOLClient) GetBlock(block int) ([]byte, ResponseType) {
 	ret := []byte("")
-	r_type := ResponseType(R_OK)
+	r_type := R_OK
 	if this.version_major == 1 && this.version_minor <= 6 {
 		ret, r_type = this.RequestBasic("getConfirmedBlock", fmt.Sprintf("[%d]", block))
 	} else {
@@ -112,6 +114,7 @@ func (this *SOLClient) GetBlock(block int) ([]byte, ResponseType) {
 
 	switch v["result"].(type) {
 	case nil:
+		fmt.Sprintf("Warning: Cannot get block %d using endpoint %s. Probably the node doesn't have data.\n", block, this.endpoint)
 		return ret, R_ERROR
 	}
 	return ret, R_OK

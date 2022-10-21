@@ -31,10 +31,10 @@ func (this *SOLClient) _maintenance() {
 		this.is_disabled = _d
 		this._probe_log = _log
 
-		// if we don't have at least 2 requests,
+		// if we don't have at least 1 requests,
 		// run a request to check if the node is alive
 		// this._probe_time related
-		if _req_ok+_req_err < 2 && this._probe_time > 0 {
+		if _req_ok+_req_err < 1 && this._probe_time > 0 {
 			go func() {
 				this.GetVersion()
 			}()
