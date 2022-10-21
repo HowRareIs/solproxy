@@ -2,7 +2,6 @@
 <p align="center">
   <img src="doc/logo_light.svg" width="350">
 </p>
-
 # HowRare Solana RPC proxy
 HowRare Solana RPC proxy is there to allow project creators to freely route Solana RPC calls to different Solana nodes utilizing prioritization and capping.
 
@@ -12,6 +11,12 @@ It allows to:
 - Spread the load across many nodes/providers
 - Automatically detect and skip failed/overloaded/timeouting nodes
 - Automatically re-do failed requests on different node if they timed-out or returned an error
+
+What's new in Solproxy 0.2?
+- Genesys support, see [adding genesys node](doc/GENESYS.md)
+- Health check for pausing lagging nodes, see [setup instructions](doc/HEALTH_CHECK.md)
+- Updated dashboard UI
+- Allow to throttle using any time interval (eg. cap requests daily or per second)
 
 <p align="center">
   <img src="doc/server-status-solproxy.png" width="550">

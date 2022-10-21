@@ -1,7 +1,6 @@
 package handle_solana_01
 
 import (
-	"fmt"
 	"gosol/solana_proxy"
 	"gosol/solana_proxy/client"
 
