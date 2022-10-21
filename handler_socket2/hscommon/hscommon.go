@@ -101,7 +101,7 @@ func FormatTime(t int) string {
 		}
 
 		if u_ > 0 {
-			uptime_str += fmt.Sprintf("%d %s%s ", u_, ranges[i], s_)
+			uptime_str += fmt.Sprintf("%d %s%s", u_, ranges[i], s_)
 			t = t % div[i]
 		}
 	}

@@ -17,6 +17,7 @@ import (
 
 	"github.com/slawomir-pryczek/handler_socket2/byteslabs"
 	"github.com/slawomir-pryczek/handler_socket2/compress"
+	"github.com/slawomir-pryczek/handler_socket2/config"
 	"github.com/slawomir-pryczek/handler_socket2/hscommon"
 	"github.com/slawomir-pryczek/handler_socket2/oslimits"
 	"github.com/slawomir-pryczek/handler_socket2/stats"
@@ -33,7 +34,7 @@ func init() {
 	oslimits.SetOpenFilesLimit(262144)
 	uptime_started = int(time.Now().UnixNano()/1000000000) - 1 // so we won't divide by 0
 
-	compression_support := Config().Get("COMPRESSION", "mp-flate")
+	compression_support := config.Config().Get("COMPRESSION", "mp-flate")
 	if strings.Index(compression_support, "mp-flate") > -1 {
 		compressor_flate = compress.CreateCompressor(runtime.NumCPU(), compress.MakeFlate())
 	}
@@ -359,7 +360,7 @@ func serveSocket(conn *net.TCPConn, handler handlerFunc) {
 		_pinfo := params.getParamInfo()
 		newconn.StateServing(action, _pinfo)
 
-		if CfgIsDebug() {
+		if config.CfgIsDebug() {
 			fmt.Println("Rec:", bytes_rec_uncompressed, "b GUID:", string(guid))
 		}
 

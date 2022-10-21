@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/flate"
 	"fmt"
+	"github.com/slawomir-pryczek/handler_socket2/config"
 	"net/url"
 	"strings"
 )
@@ -11,7 +12,7 @@ import (
 func runRequest(key string, message_body []byte, is_compressed bool, handler handlerFunc) {
 	// compression support!
 
-	if CfgIsDebug() {
+	if config.CfgIsDebug() {
 		fmt.Println("FROM UDP: ", string(message_body))
 	}
 

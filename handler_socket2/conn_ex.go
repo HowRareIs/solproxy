@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/slawomir-pryczek/handler_socket2/compress"
+	"github.com/slawomir-pryczek/handler_socket2/config"
 )
 
 type conninfo struct {
@@ -18,7 +19,7 @@ type conninfo struct {
 
 func make_conn_ex(conn *net.TCPConn) conninfo {
 	remote_addr := strings.Split(conn.RemoteAddr().String(), ":")[0]
-	remote_distance := Config().GetIPDistance(remote_addr)
+	remote_distance := config.Config().GetIPDistance(remote_addr)
 
 	conn_ex := conninfo{}
 	conn_ex.conn = conn
@@ -27,7 +28,7 @@ func make_conn_ex(conn *net.TCPConn) conninfo {
 		if compressor_flate != nil {
 			conn_ex.comp = compressor_flate
 		}
-		conn_ex.compression_threshold = Config().GetI("compression_threshold", DEFAULT_COMPRESSION_THRESHOLD)
+		conn_ex.compression_threshold = config.Config().GetI("compression_threshold", config.DEFAULT_COMPRESSION_THRESHOLD)
 	}
 
 	if conn_ex.compression_threshold == 0 {
@@ -53,7 +54,7 @@ func handle_conn_ex(data *HSParams, conn_ex *conninfo) {
 	}
 
 	// update threshold
-	_thr_from_cfg := Config().GetCompressionThreshold()
+	_thr_from_cfg := config.Config().GetCompressionThreshold()
 	conn_ex.compression_threshold = data.GetParamI("compression_threshold", _thr_from_cfg)
 	if conn_ex.compression_threshold == 0 {
 		conn_ex.comp = nil

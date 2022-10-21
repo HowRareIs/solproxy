@@ -5,6 +5,7 @@ import (
 	"compress/flate"
 	"encoding/binary"
 	"fmt"
+	"github.com/slawomir-pryczek/handler_socket2/config"
 	"net"
 	"sync"
 	"time"
@@ -297,7 +298,7 @@ func runRequestV2(key string, message_body []byte, is_compressed bool, handler h
 	}
 	// <<
 
-	if CfgIsDebug() {
+	if config.CfgIsDebug() {
 		fmt.Println("FROM UDP: ", string(message_body))
 	}
 
@@ -310,7 +311,7 @@ func runRequestV2(key string, message_body []byte, is_compressed bool, handler h
 
 	udpStatRequest(key, hsparams.GetParam("action", "?"), hsparams.getParamInfoHTML())
 	data := handler(hsparams)
-	if CfgIsDebug() {
+	if config.CfgIsDebug() {
 		fmt.Println(string(guid), ">>", data)
 	}
 	hsparams.Cleanup()

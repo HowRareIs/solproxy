@@ -97,9 +97,33 @@ func StrMessage(m string, is_ok bool) string {
 	}
 }
 
-func StrLimitLength(s string, max_len int) string {
+func StrFirstChars(s string, max_len int) string {
+	if max_len == 0 {
+		return ""
+	}
 	if len(s) <= max_len {
 		return s
 	}
-	return s[0:max_len]
+	return s[0:max_len] + "..."
+}
+
+func StrLastChars(s string, max_len int) string {
+	if max_len == 0 {
+		return ""
+	}
+	if len(s) <= max_len {
+		return s
+	}
+	return "..." + s[len(s)-max_len:]
+}
+
+func StrMidChars(s string, max_len int) string {
+	if max_len == 0 {
+		return ""
+	}
+	max_len = (max_len + 1) / 2
+	if len(s) <= max_len*2 {
+		return s
+	}
+	return s[0:max_len] + "..." + s[len(s)-max_len:]
 }
