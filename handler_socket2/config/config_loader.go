@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -26,7 +25,6 @@ func CfgIsVerbose() bool {
 const DEFAULT_COMPRESSION_THRESHOLD = 4096
 
 type cfg struct {
-	is_ready         bool
 	config           map[string]string
 	local_interfaces []string
 
@@ -43,26 +41,34 @@ type cfg struct {
 func _cfg_load_config() (*cfg, error) {
 
 	ret := cfg{}
-	conf_path := "conf.json"
+	data := []byte(nil)
 
-	if path, err := os.Readlink("/proc/self/exe"); err == nil {
-		path = filepath.Dir(path)
-		conf_path = path + "/conf.json"
-	} else {
-		fmt.Println("Can't find executable directory, using current dir for config!")
-	}
-	data, err := ioutil.ReadFile(conf_path)
-	if err != nil {
-		return nil, err
-	}
+	// Load config
+	{
+		conf_path := "conf.json"
+		if len(os.Args) >= 2 {
+			conf_path = os.Args[1]
+		}
+		if path, err := os.Readlink("/proc/self/exe"); err == nil {
+			path = filepath.Dir(path)
+			conf_path = path + "/conf.json"
+		} else {
+			fmt.Println("Can't find executable directory, using current dir for config!")
+		}
+		fmt.Println("Reading configuration: " + conf_path)
+		data_tmp, err := os.ReadFile(conf_path)
+		if err != nil {
+			return nil, err
+		}
+		data = data_tmp
 
-	st, _ := os.Stat(conf_path)
-	ret.cfg_file_path = conf_path
-	ret.cfg_file_size = st.Size()
-	ret.cfg_file_modified = st.ModTime().Unix()
+		st, _ := os.Stat(conf_path)
+		ret.cfg_file_path = conf_path
+		ret.cfg_file_size = st.Size()
+		ret.cfg_file_modified = st.ModTime().Unix()
+	}
 
 	var cfg_tmp map[string]interface{}
-
 	d := json.NewDecoder(bytes.NewReader(data))
 	d.UseNumber()
 	d.Decode(&cfg_tmp)

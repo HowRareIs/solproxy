@@ -14,6 +14,18 @@ var _config atomic.Value
 
 var cfg_initialized = false
 var cfg_mu sync.Mutex
+var cfg_onchange []func()
+
+func attachOnChange(callback func()) {
+	cfg_mu.Lock()
+	cfg_onchange = append(cfg_onchange, callback)
+	_i := cfg_initialized
+	cfg_mu.Unlock()
+
+	if _i {
+		callback()
+	}
+}
 
 func init() {
 	ReadConfig()
@@ -50,6 +62,14 @@ func init() {
 			tmp._cfg_local_interfaces()
 			tmp._cfg_conditional_config()
 			_config.Store(tmp)
+
+			cbs := make([]func(), len(cfg_onchange))
+			cfg_mu.Lock()
+			copy(cbs, cfg_onchange)
+			cfg_mu.Unlock()
+			for _, cb := range cbs {
+				go func() { cb() }()
+			}
 		}
 	}()
 }
@@ -65,7 +85,9 @@ func ReadConfig() {
 
 	tmp, err := _cfg_load_config()
 	if err != nil {
-		fmt.Println("FATAL Error opening configuration file conf.json:", err)
+		fmt.Println("===")
+		fmt.Println("FATAL Error opening configuration file:\n", err.Error())
+		fmt.Println("===")
 		os.Exit(1)
 	}
 
