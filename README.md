@@ -2,6 +2,7 @@
 <p align="center">
   <img src="doc/logo_light.svg" width="350">
 </p>
+
 # HowRare Solana RPC proxy
 HowRare Solana RPC proxy is there to allow project creators to freely route Solana RPC calls to different Solana nodes utilizing prioritization and capping.
 
