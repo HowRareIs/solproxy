@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/slawomir-pryczek/handler_socket2/hscommon"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/hscommon"
 )
 
 func GetStatus(available_actions []string, uptime int) map[string]string {

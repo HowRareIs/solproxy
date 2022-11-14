@@ -1,4 +1,4 @@
-module handler_socket2
+module github.com/slawomir-pryczek/HSServer/handler_socket2
 
 go 1.18
 

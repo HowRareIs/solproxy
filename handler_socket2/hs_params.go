@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/slawomir-pryczek/handler_socket2/byteslabs"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/byteslabs"
 )
 
 type HSParams struct {

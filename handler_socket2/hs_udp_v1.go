@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"compress/flate"
 	"fmt"
-	"github.com/slawomir-pryczek/handler_socket2/config"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/config"
 	"net/url"
 	"strings"
 )

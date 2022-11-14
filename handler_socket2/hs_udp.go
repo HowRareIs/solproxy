@@ -5,7 +5,7 @@ import (
 	"compress/flate"
 	"encoding/binary"
 	"fmt"
-	"github.com/slawomir-pryczek/handler_socket2/config"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/config"
 	"net"
 	"sync"
 	"time"

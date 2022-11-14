@@ -15,60 +15,29 @@ import (
 	"strings"
 	"time"
 
-	"github.com/slawomir-pryczek/handler_socket2/byteslabs"
-	"github.com/slawomir-pryczek/handler_socket2/compress"
-	"github.com/slawomir-pryczek/handler_socket2/config"
-	"github.com/slawomir-pryczek/handler_socket2/hscommon"
-	"github.com/slawomir-pryczek/handler_socket2/oslimits"
-	"github.com/slawomir-pryczek/handler_socket2/stats"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/byteslabs"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/compress"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/config"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/hscommon"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/oslimits"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/stats"
 )
 
 const version = "HSServer v4"
 
 var uptime_started int
 
-var compressor_snappy *compress.Compressor = nil
-var compressor_flate *compress.Compressor = nil
-
 func init() {
 	oslimits.SetOpenFilesLimit(262144)
 	uptime_started = int(time.Now().UnixNano()/1000000000) - 1 // so we won't divide by 0
-
-	compression_support := config.Config().Get("COMPRESSION", "mp-flate")
-	if strings.Index(compression_support, "mp-flate") > -1 {
-		compressor_flate = compress.CreateCompressor(runtime.NumCPU(), compress.MakeFlate())
-	}
-	if strings.Index(compression_support, "mp-snappy") > -1 {
-		compressor_snappy = compress.CreateCompressor(runtime.NumCPU(), compress.MakeSnappy())
-	}
-
-	if compressor_flate == nil && compressor_snappy == nil {
-		fmt.Println("Multipart compression is disabled, use compression_support=[mp-flate,mp-snappy] to enable")
-	} else {
-		fmt.Println("Multipart compression is enabled")
-	}
 
 	_comp_status := func() (string, string) {
 
 		ret := "<pre>-- Simple Compress\n"
 		ret += compress.CompressSimpleStatus()
 		ret += "</pre>"
-		if compressor_flate == nil && compressor_snappy == nil {
-			return "Compression Plugins (multithreaded compression is disabled)", ret
-		}
 
-		ret += "<br><pre>-- Multipart Compress (multi threaded)\n"
-		ret += "Multipart compression is used to quickly set compressed data using internal framing format\n"
-		ret += "It is not compatible with standard compression schemas.\n\n"
-		ret += "E-RLow - error, compression ratio too low\tE-Buffer - error, compression buffer too small\n"
-		if compressor_flate != nil {
-			ret += compressor_flate.GetStatus()
-		}
-		if compressor_snappy != nil {
-			ret += compressor_snappy.GetStatus()
-		}
-		ret += "</pre>"
-
+		ret += compression_ex_status()
 		return "Compression Plugins", ret
 	}
 

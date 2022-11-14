@@ -2,7 +2,7 @@ package handler_socket2
 
 import (
 	"fmt"
-	"github.com/slawomir-pryczek/handler_socket2/config"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/config"
 	"net"
 	"os"
 	"sync"
@@ -44,8 +44,10 @@ var boundTo []string = []string{}
 var boundMutex sync.Mutex
 
 func StartServer(bind_to []string) {
-	var wg sync.WaitGroup
 
+	compression_ex_read_config()
+
+	var wg sync.WaitGroup
 	wg.Add(1)
 
 	for _, bt := range bind_to {

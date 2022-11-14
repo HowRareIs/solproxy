@@ -3,12 +3,12 @@ package byteslabs
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
-	"github.com/slawomir-pryczek/handler_socket2/hscommon"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/hscommon"
 )
 
 func GetStatus() (string, string) {
-
 	ret := "<pre>"
 	ret += fmt.Sprintf("Slab Allocator. Slab Size: %d x %d Slabs = %d items per Page. %d Pages.\n", slab_size, slab_count, slab_size*slab_count, mem_chunks_count)
 	ret += "Alloc Full - We're allocating >1 SLABS, happens at page begin\n"
@@ -18,7 +18,6 @@ func GetStatus() (string, string) {
 	ret += "Routed - Allocations was routed to least used slab page, allocations per routing\n"
 	ret += "Routed Alloc - Allocations in routed slabs\n"
 	ret += ". - Slab is EMPTY; F - Slab is FULL\n"
-	ret += intpool.status() + "<br>"
 	ret += "</pre>"
 
 	ret += "<style>"
@@ -63,4 +62,27 @@ func GetStatus() (string, string) {
 	}
 
 	return "Slab Allocator \\ QCompress", ret + tg.Render()
+}
+
+func GetStatusStr() string {
+	ret := make([]string, 0, 40)
+	ret = append(ret, "=====")
+	total_failed := 0
+	total_f, total_fs, total_t := 0, 0, 0
+	for k, v := range mem_chunks {
+		ret = append(ret, fmt.Sprint(k, "Full:", v.stat_alloc_full, "Full Small:", v.stat_alloc_full_small,
+			"Tail:", v.stat_alloc_tail, "OOM:", v.stat_oom, "Routed:", v.stat_routed,
+			"Slab taken:", v.used_slab_count))
+
+		total_failed += v.stat_oom - v.stat_routed
+		total_f += v.stat_alloc_full
+		total_fs += v.stat_alloc_full_small
+		total_t += v.stat_alloc_tail
+	}
+
+	ret = append(ret, fmt.Sprintf("=Totals ... Full: %d Full Small: %d Tail: %d \n", total_f, total_fs, total_t))
+	ret = append(ret, fmt.Sprintf("=Items Total: %d, Failed: %d\n",
+		total_f+total_fs+total_t+total_failed, total_failed))
+	ret = append(ret, fmt.Sprint("Real Total: ", ttT_total))
+	return strings.Join(ret, "\n")
 }

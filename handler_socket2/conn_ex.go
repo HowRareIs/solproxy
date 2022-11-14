@@ -5,8 +5,8 @@ import (
 	"net"
 	"strings"
 
-	"github.com/slawomir-pryczek/handler_socket2/compress"
-	"github.com/slawomir-pryczek/handler_socket2/config"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/compress"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/config"
 )
 
 type conninfo struct {

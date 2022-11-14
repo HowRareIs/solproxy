@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/slawomir-pryczek/handler_socket2/byteslabs"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/byteslabs"
 )
 
 const max_compressors = 20

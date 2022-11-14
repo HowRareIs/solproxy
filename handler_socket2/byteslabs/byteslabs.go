@@ -4,16 +4,11 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
-const mem_chunks_count = 6
+const mem_chunks_count = 8
 const slab_size = 40000
-const slab_count = 80
-
-const intpool_size = 100
-
-var intpool *ipool
+const slab_count = 100
 
 type mem_chunk struct {
 	memory []byte
@@ -42,13 +37,24 @@ type Allocator struct {
 	addl_allocator *Allocator
 }
 
-var mutex_slab sync.Mutex
-
 var mem_chunks [mem_chunks_count]*mem_chunk
 
-func init() {
+type BSManager struct {
+	mem_chunks_count int // number of memory chunks
+	slab_size        int // size of single memory slab
+	slab_count       int // number of slabs in a chunk
+	mem_chunks       []*mem_chunk
+}
 
-	intpool = MakePool(intpool_size, slab_count)
+func Make(mem_chunks_count, slab_size, slab_count int) *BSManager {
+	_mc := make([]*mem_chunk, mem_chunks_count)
+	for i := 0; i < len(_mc); i++ {
+		_mc[i] = &mem_chunk{memory: make([]byte, slab_size*slab_count)}
+	}
+	return &BSManager{mem_chunks_count, slab_size, slab_count, _mc}
+}
+
+func init() {
 	for k, _ := range mem_chunks {
 		mem_chunks[k] = &mem_chunk{memory: make([]byte, slab_size*slab_count)}
 	}
@@ -139,27 +145,27 @@ func MakeAllocator() *Allocator {
 }
 
 // NOTE: This will always use locking facilities provided by Allocate function!
-func (this *Allocator) take_additional() {
-
+func (this *Allocator) take_additional(slab_needed int) {
 	// we won't create additional allocator if the allocator is additional already
 	if this.is_additional || this.addl_allocator != nil {
 		return
 	}
 
 	best_slab := -1
-	chunks_used := -1
+	chunks_free := -1
 	for i := 0; i < mem_chunks_count; i++ {
-
 		if mem_chunks[i] == this.mem_chunk {
 			continue
 		}
 
-		_cprobe := int(mem_chunks[i].used_slab_count)
-
-		if chunks_used == -1 || _cprobe < chunks_used {
+		_free := slab_count - int(atomic.LoadInt32(&mem_chunks[i].used_slab_count))
+		if _free >= slab_needed && _free > chunks_free {
 			best_slab = i
-			chunks_used = _cprobe
+			chunks_free = _free
 		}
+	}
+	if best_slab == -1 {
+		return
 	}
 
 	t1 := make([]int, 0, 5)
@@ -175,24 +181,24 @@ func (this *Allocator) Release() {
 	}
 
 	mem_chunk := this.mem_chunk
-	mem_chunk.mu.Lock()
 
+	mem_chunk.mu.Lock()
+	curr_used := len(this.slab_used)
 	for _, v := range this.slab_used {
 		mem_chunk.slab_used[v] = false
 	}
+	this.slab_free_space = this.slab_free_space[:0]
+	this.slab_used = this.slab_used[:0]
+	atomic.AddInt32(&mem_chunk.used_slab_count, int32(-curr_used))
 
-	//fmt.Println("RELEASED", this.slab_used)
-	atomic.AddInt32(&mem_chunk.used_slab_count, int32(-len(this.slab_used)))
-	this.slab_free_space = []int{}
-	this.slab_used = []int{}
-
-	aa_release := this.addl_allocator
+	_allocator_to_clean := this.addl_allocator
 	this.addl_allocator = nil
 	mem_chunk.mu.Unlock()
 
-	if aa_release != nil {
-		aa_release.Release()
+	if _allocator_to_clean != nil {
+		_allocator_to_clean.Release()
 	}
+
 }
 
 func (this *Allocator) _alloc(mc *mem_chunk, slab_num, slabs_needed, slab_free, size int) []byte {
@@ -219,21 +225,54 @@ func (this *Allocator) _alloc(mc *mem_chunk, slab_num, slabs_needed, slab_free, 
 	return mc.memory[start_pos : start_pos : start_pos+size]
 }
 
+var ttT_total = uint32(0)
+
 func (this *Allocator) Allocate(size int) []byte {
 
 	if size <= 96 {
 		return make([]byte, 0, size)
 	}
 
+	atomic.AddUint32(&ttT_total, 1)
+
+	this.mem_chunk.mu.Lock()
+	slb_mem := this.allocate_slab(size)
+
+	_addl := this.addl_allocator
+	if slb_mem == nil && _addl == nil && this.is_additional == false {
+		this.take_additional((size / slab_size) + 5)
+		_addl = this.addl_allocator
+	}
+	if slb_mem == nil && _addl != nil {
+		this.mem_chunk.stat_routed++
+	}
+	this.mem_chunk.mu.Unlock()
+
+	if slb_mem == nil && _addl != nil {
+		this.addl_allocator.mem_chunk.mu.Lock()
+		slb_mem = this.addl_allocator.allocate_slab(size)
+		this.addl_allocator.mem_chunk.mu.Unlock()
+	}
+
+	if slb_mem == nil {
+		slb_mem = make([]byte, 0, size)
+	}
+	return slb_mem
+}
+
+func (this *Allocator) allocate_slab(size int) []byte {
+
 	slab_free := (slab_size - (size % slab_size)) % slab_size
 	slabs_needed := size / slab_size
 	if slab_free > 0 {
 		slabs_needed++
 	}
-
 	mem_chunk := this.mem_chunk
-	mem_chunk.mu.Lock()
-	defer mem_chunk.mu.Unlock()
+
+	if slabs_needed > slab_count-int(mem_chunk.used_slab_count) {
+		mem_chunk.stat_oom++
+		return nil
+	}
 
 	// maybe we can put some data into slabs already allocated by us!
 	if slabs_needed <= 1 {
@@ -261,7 +300,6 @@ func (this *Allocator) Allocate(size int) []byte {
 
 	// allocate single slab at the end, if 1 is enough space
 	if slabs_needed <= 1 {
-
 		pos := len(mem_chunk.slab_used) - 1
 		for ; pos >= 0; pos-- {
 			if !mem_chunk.slab_used[pos] {
@@ -273,13 +311,13 @@ func (this *Allocator) Allocate(size int) []byte {
 			if this.is_additional {
 				mem_chunk.stat_routed_alloc++
 			}
+
 			atomic.AddInt32(&this.mem_chunk.used_slab_count, int32(slabs_needed))
 			return this._alloc(mem_chunk, pos, slabs_needed, slab_free, size)
 		}
 	}
 
 	if slabs_needed > 1 {
-
 		free_slabs, pos := 0, 0
 		for pos = 0; pos < len(mem_chunk.slab_used); pos++ {
 			if !mem_chunk.slab_used[pos] {
@@ -303,41 +341,8 @@ func (this *Allocator) Allocate(size int) []byte {
 		}
 	}
 
-	//	return mem_chunk.memory[start_pos : start_pos+size]
-	if this.is_additional == false {
-		this.take_additional()
-	}
-
-	if this.addl_allocator != nil {
-		mem_chunk.mu.Unlock()
-		ret := this.addl_allocator.Allocate(size)
-
-		mem_chunk.mu.Lock()
-		mem_chunk.stat_routed++
-		return ret
-	}
-
 	mem_chunk.stat_oom++
-	return make([]byte, 0, size)
-}
-
-type TimeSpan struct {
-	req_time int64
-}
-
-func NewTimeSpan() *TimeSpan {
-
-	ts := TimeSpan{}
-	ts.req_time = time.Now().UnixNano()
-	return &ts
-
-}
-
-func (ts *TimeSpan) Get() string {
-
-	t := float64((time.Now().UnixNano() - ts.req_time)) / float64(1000000)
-
-	return fmt.Sprintf("%.3fms", t)
+	return nil
 }
 
 func init() {
@@ -414,66 +419,4 @@ func init() {
 	}
 
 	fmt.Println("-----------------------------", "SUM OOM:", oom_sum, " TIME:", ts.Get())*/
-}
-
-type ipool struct {
-	elements     [][]int
-	mu           sync.Mutex
-	initial_size int
-	element_size int
-
-	reqs, overflows int
-}
-
-func MakePool(initial_size, element_size int) *ipool {
-
-	elements := make([][]int, initial_size)
-	for i := 0; i < initial_size; i++ {
-		elements[i] = make([]int, 0, element_size)
-	}
-
-	return &ipool{elements: elements, initial_size: initial_size, element_size: element_size}
-}
-
-func (this *ipool) push(val []int) {
-
-	if cap(val) != this.element_size {
-		return
-	}
-	val = val[:0]
-
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	if len(this.elements) >= this.initial_size {
-		return
-	}
-
-	this.elements = append(this.elements, val)
-}
-
-func (this *ipool) pop() []int {
-
-	this.mu.Lock()
-	defer this.mu.Unlock()
-
-	l := len(this.elements)
-
-	if l <= 0 {
-		this.overflows++
-		return []int{}
-	}
-
-	ret := this.elements[l-1]
-	this.elements = this.elements[0 : l-1]
-	this.reqs++
-
-	return ret
-}
-
-func (this *ipool) status() string {
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	return fmt.Sprintf("INTPOOL: Size %d / Used %d ... Requests %d / Overflows %d",
-		this.initial_size, this.initial_size-len(this.elements),
-		this.reqs, this.overflows)
 }
