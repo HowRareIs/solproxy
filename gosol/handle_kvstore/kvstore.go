@@ -2,7 +2,7 @@ package handle_kvstore
 
 import (
 	"fmt"
-	"github.com/slawomir-pryczek/handler_socket2"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2"
 )
 
 type Handle_kvstore struct {

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/slawomir-pryczek/handler_socket2"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2"
 )
 
 func _passthrough_err(err string) []byte {

@@ -1,7 +1,7 @@
 package plugin_manager
 
 import (
-	"github.com/slawomir-pryczek/handler_socket2"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2"
 	"gosol/plugins/common"
 	"gosol/plugins/genesys"
 	"sync"

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/slawomir-pryczek/handler_socket2"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2"
 	"gosol/solana_proxy"
 	"math"
 )

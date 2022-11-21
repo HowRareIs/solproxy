@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/slawomir-pryczek/handler_socket2"
-	"github.com/slawomir-pryczek/handler_socket2/config"
-	"github.com/slawomir-pryczek/handler_socket2/handle_echo"
-	"github.com/slawomir-pryczek/handler_socket2/handle_profiler"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/config"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/handle_echo"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/handle_profiler"
 	"gosol/handle_kvstore"
 	"gosol/passthrough"
 	plugin_manager "gosol/plugins"

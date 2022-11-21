@@ -7,7 +7,7 @@ import (
 	"html"
 	"time"
 
-	"github.com/slawomir-pryczek/handler_socket2/hscommon"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/hscommon"
 )
 
 var start_time = int64(0)

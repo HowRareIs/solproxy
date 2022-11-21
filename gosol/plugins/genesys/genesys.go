@@ -3,8 +3,8 @@ package genesys
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/slawomir-pryczek/handler_socket2/config"
-	"github.com/slawomir-pryczek/handler_socket2/hscommon"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/config"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/hscommon"
 	"gosol/handle_kvstore"
 	"gosol/plugins/common"
 	"strings"

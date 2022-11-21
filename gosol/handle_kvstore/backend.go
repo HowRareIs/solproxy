@@ -1,7 +1,7 @@
 package handle_kvstore
 
 import (
-	"github.com/slawomir-pryczek/handler_socket2/hscommon"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/hscommon"
 	"sync"
 )
 

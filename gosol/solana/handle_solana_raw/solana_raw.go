@@ -6,7 +6,7 @@ import (
 	"gosol/solana_proxy"
 	"gosol/solana_proxy/client"
 
-	"github.com/slawomir-pryczek/handler_socket2"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2"
 )
 
 type Handle_solana_raw struct {

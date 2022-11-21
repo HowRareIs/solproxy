@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"gosol/solana_proxy"
 
-	"github.com/slawomir-pryczek/handler_socket2"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2"
 )
 
 type Handle_solana_info struct {

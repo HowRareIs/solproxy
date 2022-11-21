@@ -2,13 +2,13 @@ package handle_passthrough
 
 import (
 	"encoding/json"
-	"github.com/slawomir-pryczek/handler_socket2/config"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2/config"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/slawomir-pryczek/handler_socket2"
+	"github.com/slawomir-pryczek/HSServer/handler_socket2"
 )
 
 type Handle_passthrough struct {
