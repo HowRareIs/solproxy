@@ -1,7 +1,6 @@
 package byteslabs
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 )
@@ -39,98 +38,11 @@ type Allocator struct {
 
 var mem_chunks [mem_chunks_count]*mem_chunk
 
-type BSManager struct {
-	mem_chunks_count int // number of memory chunks
-	slab_size        int // size of single memory slab
-	slab_count       int // number of slabs in a chunk
-	mem_chunks       []*mem_chunk
-}
-
-func Make(mem_chunks_count, slab_size, slab_count int) *BSManager {
-	_mc := make([]*mem_chunk, mem_chunks_count)
-	for i := 0; i < len(_mc); i++ {
-		_mc[i] = &mem_chunk{memory: make([]byte, slab_size*slab_count)}
-	}
-	return &BSManager{mem_chunks_count, slab_size, slab_count, _mc}
-}
-
 func init() {
 	for k, _ := range mem_chunks {
 		mem_chunks[k] = &mem_chunk{memory: make([]byte, slab_size*slab_count)}
 	}
 }
-
-/*
-func AA() {
-
-	a := MakeAllocator()
-	b := a.Allocate(2)
-	c := a.Allocate(2)
-	a.Allocate(2)
-	a.Allocate(2)
-	b[0] = 1
-	b[1] = 2
-	c[0] = 3
-	c[1] = 4
-
-	fmt.Println("U", b)
-	fmt.Println("U", c)
-
-	a.Allocate(1000)
-	a.Allocate(50)
-	a.Allocate(50)
-	a.Allocate(8900)
-	a.Allocate(18900)
-	a.Allocate(18900)
-	a.Allocate(10)
-	a.Allocate(4440)
-	a.Allocate(440)
-	a.Release()
-
-	var wg sync.WaitGroup
-
-	ts := NewTimeSpan()
-
-	for ii := 0; ii < 20; ii++ {
-		wg.Add(1)
-		go func() {
-			a := MakeAllocator()
-			for i := 0; i < 20000; i++ {
-				a.Allocate(1400)
-				if i%4 == 0 {
-					a.Release()
-				}
-			}
-			a.Release()
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-
-	fmt.Println("TOOK SLAB", ts.Get())
-
-	ts = NewTimeSpan()
-
-	for ii := 0; ii < 20; ii++ {
-		wg.Add(1)
-		func() {
-			pool := bytepool.MakeBytePool()
-			for i := 0; i < 20000; i++ {
-				pool.GetBytePool(1400)
-				if i%4 == 0 {
-					pool.Release()
-				}
-			}
-			pool.Release()
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-
-	fmt.Println("TOOK BPOOL", ts.Get())
-
-	fmt.Println("SSS")
-}*/
 
 var curr_mem_chunk = uint32(0)
 
@@ -225,15 +137,11 @@ func (this *Allocator) _alloc(mc *mem_chunk, slab_num, slabs_needed, slab_free, 
 	return mc.memory[start_pos : start_pos : start_pos+size]
 }
 
-var ttT_total = uint32(0)
-
 func (this *Allocator) Allocate(size int) []byte {
 
 	if size <= 96 {
 		return make([]byte, 0, size)
 	}
-
-	atomic.AddUint32(&ttT_total, 1)
 
 	this.mem_chunk.mu.Lock()
 	slb_mem := this.allocate_slab(size)
@@ -343,80 +251,4 @@ func (this *Allocator) allocate_slab(size int) []byte {
 
 	mem_chunk.stat_oom++
 	return nil
-}
-
-func init() {
-
-	oom_sum := 0
-	for k, v := range mem_chunks {
-		fmt.Println(k, "Full:", v.stat_alloc_full, "Full Small:", v.stat_alloc_full_small,
-			"Tail:", v.stat_alloc_tail, "OOM:", v.stat_oom, "Routed:", v.stat_routed,
-			"Slab taken:", v.used_slab_count)
-		oom_sum += v.stat_oom
-	}
-
-	return
-
-	/*fmt.Println("SSSSSSSSSS")
-
-	runtime.GOMAXPROCS(16)
-	ok := true
-
-	var mm runtime.MemStats
-	runtime.ReadMemStats(&mm)
-	fmt.Println(mm)
-	fmt.Print(mm)
-
-	ts := NewTimeSpan()
-
-	f, _ := os.Create("cpuprofile")
-	pprof.StartCPUProfile(f)
-
-	var wg sync.WaitGroup
-	for ii := 0; ii < 20; ii++ {
-		wg.Add(1)
-
-		go func(ii int) {
-
-			r := rand.New(rand.NewSource(time.Now().UnixNano()))
-			a := MakeAllocator()
-			dtot := make([][]int, 0)
-
-			for i := 0; i < 40000 && ok; i++ {
-
-				size := r.Int()%20000 + 100
-				_data := a.Allocate(size)
-				for e := 0; e < size; e++ {
-					_data[e] = ii
-				}
-				dtot = append(dtot, _data)
-
-				if i%((ii*ii+3)/2) == 0 {
-					for _, iv := range dtot {
-						for _, iiv := range iv {
-							if iiv != ii {
-								fmt.Println("!=", iiv, ii)
-								ok = false
-							}
-						}
-					}
-					dtot = make([][]int, 0)
-					a.Release()
-				}
-			}
-			a.Release()
-			wg.Done()
-		}(ii)
-	}
-	wg.Wait()
-
-	pprof.StopCPUProfile()
-
-
-
-	if !ok {
-		fmt.Println("ERROR-X")
-	}
-
-	fmt.Println("-----------------------------", "SUM OOM:", oom_sum, " TIME:", ts.Get())*/
 }

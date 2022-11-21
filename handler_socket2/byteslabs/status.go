@@ -83,6 +83,5 @@ func GetStatusStr() string {
 	ret = append(ret, fmt.Sprintf("=Totals ... Full: %d Full Small: %d Tail: %d \n", total_f, total_fs, total_t))
 	ret = append(ret, fmt.Sprintf("=Items Total: %d, Failed: %d\n",
 		total_f+total_fs+total_t+total_failed, total_failed))
-	ret = append(ret, fmt.Sprint("Real Total: ", ttT_total))
 	return strings.Join(ret, "\n")
 }
