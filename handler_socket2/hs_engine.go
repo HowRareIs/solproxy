@@ -51,8 +51,11 @@ func StartServer(bind_to []string) {
 	wg.Add(1)
 
 	for _, bt := range bind_to {
-		go func(bt string) {
+		if len(bt) < 1 {
+			continue
+		}
 
+		go func(bt string) {
 			switch {
 			case bt[0] == 'h':
 				startServiceHTTP(bt[1:], handleRequest)
