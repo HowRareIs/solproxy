@@ -49,12 +49,15 @@ func _cfg_load_config() (*cfg, error) {
 		if len(os.Args) >= 2 {
 			conf_path = os.Args[1]
 		}
-		if path, err := os.Readlink("/proc/self/exe"); err == nil {
-			path = filepath.Dir(path)
-			conf_path = path + "/conf.json"
-		} else {
-			fmt.Println("Can't find executable directory, using current dir for config!")
+		if strings.Index(conf_path, "/") == -1 {
+			if path, err := os.Readlink("/proc/self/exe"); err == nil {
+				path = filepath.Dir(path)
+				conf_path = path + "/" + conf_path
+			} else {
+				fmt.Println("Can't find executable directory, using current dir for config!")
+			}
 		}
+
 		fmt.Println("Reading configuration: " + conf_path)
 		data_tmp, err := os.ReadFile(conf_path)
 		if err != nil {
