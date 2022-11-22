@@ -39,7 +39,6 @@ type cfg struct {
 
 // Load config from json file
 func _cfg_load_config() (*cfg, error) {
-
 	ret := cfg{}
 	data := []byte(nil)
 
