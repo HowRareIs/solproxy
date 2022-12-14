@@ -54,6 +54,7 @@ func init() {
 	go func() {
 		last := time.Now().Unix()
 		for {
+			time.Sleep(750 * time.Millisecond)
 			if t := time.Now().Unix(); t-last < cc.run_every {
 				continue
 			} else {
