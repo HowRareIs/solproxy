@@ -3,6 +3,7 @@ package handle_solana_01
 import (
 	"gosol/solana_proxy"
 	"gosol/solana_proxy/client"
+	"strings"
 
 	"github.com/slawomir-pryczek/HSServer/handler_socket2"
 )
@@ -35,13 +36,31 @@ func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.
 		return `{"error":"can't find appropriate client"}`
 	}
 
+	mstv_i := 0
+	if action == "getBlock" || action == "getTransaction" {
+		mstv := data.GetParam("maxSupportedTransactionVersion", "")
+		if len(mstv) > 0 {
+			mstv_i = -2
+			if strings.EqualFold("legacy", mstv) {
+				mstv_i = -1
+			}
+			if mstv == "0" {
+				mstv_i = 0
+			}
+		}
+		if mstv_i == -2 {
+			return `{"error":"maxSupportedTransactionVersion needs to be 0 or legacy"}`
+		}
+	}
+
 	if action == "getBlock" {
 		block_no := data.GetParamI("block", -1)
 		if block_no == -1 {
 			return `{"error":"provide block number as &block=123"}`
 		}
+
 		sch.SetMinBlock(block_no)
-		ret, result := cl.GetBlock(block_no)
+		ret, result := cl.GetBlock(block_no, mstv_i)
 
 		for result != client.R_OK {
 			cl = sch.GetPublicClient()
@@ -51,7 +70,7 @@ func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.
 			if cl == nil {
 				return `{"error":"can't find appropriate client (2)"}`
 			}
-			ret, result = cl.GetBlock(block_no)
+			ret, result = cl.GetBlock(block_no, mstv_i)
 		}
 		data.FastReturnBNocopy(ret)
 		return ""
@@ -63,7 +82,7 @@ func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.
 			return `{"error":"provide transaction &hash=123"}`
 		}
 
-		ret, result := cl.GetTransaction(hash)
+		ret, result := cl.GetTransaction(hash, mstv_i)
 		for result != client.R_OK {
 			cl = sch.GetPublicClient()
 			if cl == nil {
@@ -73,7 +92,7 @@ func (this *Handle_solana_01) HandleAction(action string, data *handler_socket2.
 				return `{"error":"can't find appropriate client (2)"}`
 			}
 
-			ret, result = cl.GetTransaction(hash)
+			ret, result = cl.GetTransaction(hash, mstv_i)
 		}
 
 		data.FastReturnBNocopy(ret)

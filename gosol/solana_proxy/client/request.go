@@ -95,13 +95,20 @@ func (this *SOLClient) GetVersion() (int, int, string, ResponseType) {
 	return version_major, version_minor, tmp.Result.Solana_core, R_OK
 }
 
-func (this *SOLClient) GetBlock(block int) ([]byte, ResponseType) {
+func (this *SOLClient) GetBlock(block int, maxSupportedTransactionVersion int) ([]byte, ResponseType) {
+	params := ""
+	if maxSupportedTransactionVersion < 0 {
+		params = fmt.Sprintf("[%d]", block)
+	} else {
+		params = fmt.Sprintf(`[%d,{"maxSupportedTransactionVersion":%d}]`, block, maxSupportedTransactionVersion)
+	}
+
 	ret := []byte("")
 	r_type := R_OK
 	if this.version_major == 1 && this.version_minor <= 6 {
-		ret, r_type = this.RequestBasic("getConfirmedBlock", fmt.Sprintf("[%d]", block))
+		ret, r_type = this.RequestBasic("getConfirmedBlock", params)
 	} else {
-		ret, r_type = this.RequestBasic("getBlock", fmt.Sprintf("[%d]", block))
+		ret, r_type = this.RequestBasic("getBlock", params)
 	}
 	if ret == nil {
 		return ret, r_type
@@ -120,8 +127,14 @@ func (this *SOLClient) GetBlock(block int) ([]byte, ResponseType) {
 	return ret, R_OK
 }
 
-func (this *SOLClient) GetTransaction(hash string) ([]byte, ResponseType) {
-	params := fmt.Sprintf("[\"%s\"]", hash)
+func (this *SOLClient) GetTransaction(hash string, maxSupportedTransactionVersion int) ([]byte, ResponseType) {
+	params := ""
+	if maxSupportedTransactionVersion < 0 {
+		params = fmt.Sprintf(`["%s"]`, hash)
+	} else {
+		params = fmt.Sprintf(`["%s",{"maxSupportedTransactionVersion":%d}]`, hash, maxSupportedTransactionVersion)
+	}
+
 	ret := []byte("")
 	r_type := ResponseType(R_OK)
 	if this.version_major == 1 && this.version_minor <= 6 {
