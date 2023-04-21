@@ -3,7 +3,6 @@ package plugin_manager
 import (
 	"github.com/slawomir-pryczek/HSServer/handler_socket2"
 	"gosol/plugins/common"
-	"gosol/plugins/genesys"
 	"sync"
 	"time"
 )
@@ -47,10 +46,11 @@ func register(p *common.Plugin) {
 
 func RegisterAll() {
 
+	/* Genesys plugin
 	tmp := genesys.Init("plugin-genesys")
 	if tmp != nil {
 		register(tmp)
-	}
+	}*/
 
 	handler_socket2.StatusPluginRegister(func() (string, string) {
 		ret := ""

@@ -7,11 +7,12 @@ import (
 	"gosol/solana_proxy/client"
 	"gosol/solana_proxy/client/throttle"
 	"math"
+	"net/http"
 	"reflect"
 	"strings"
 )
 
-func NodeRegister(endpoint string, public bool, probe_time int, throttle []*throttle.Throttle) *client.SOLClient {
+func NodeRegister(endpoint string, header http.Header, public bool, probe_time int, throttle []*throttle.Throttle) *client.SOLClient {
 	if len(endpoint) == 0 {
 		return nil
 	}
@@ -29,7 +30,7 @@ func NodeRegister(endpoint string, public bool, probe_time int, throttle []*thro
 		}
 	}
 
-	cl := client.MakeClient(endpoint, public, probe_time, max_conn, throttle)
+	cl := client.MakeClient(endpoint, header, public, probe_time, max_conn, throttle)
 	solana_proxy.ClientManage(cl, math.MaxUint64)
 	return cl
 }
@@ -52,6 +53,7 @@ func NodeRegisterFromConfig(node map[string]interface{}) *client.SOLClient {
 	public := _get_cfg_data(node, "public", false)
 	score_modifier, _ := _get_cfg_data(node, "score_modifier", json.Number("0")).Int64()
 	probe_time, _ := _get_cfg_data(node, "probe_time", json.Number("-1")).Int64()
+	header := parseHeader(_get_cfg_data(node, "header", ""))
 
 	if url == "" {
 		fmt.Println("Cannot read node config (no url) ... skipping")
@@ -86,5 +88,5 @@ func NodeRegisterFromConfig(node map[string]interface{}) *client.SOLClient {
 		fmt.Println(" ", log)
 	}
 
-	return NodeRegister(url, public, int(probe_time), thr)
+	return NodeRegister(url, header, public, int(probe_time), thr)
 }

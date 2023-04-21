@@ -3,11 +3,9 @@ package client
 import (
 	"bytes"
 	"fmt"
-	"gosol/handle_kvstore"
 	"gosol/solana_proxy/client/throttle"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 
 	"encoding/json"
@@ -140,6 +138,10 @@ func (this *SOLClient) RequestBasic(method_param ...string) ([]byte, ResponseTyp
 
 func (this *SOLClient) _docall(ts_started int64, post []byte) []byte {
 	req, err := http.NewRequest("POST", this.endpoint, bytes.NewBuffer(post))
+	if this.header != nil {
+		req.Header = this.header.Clone()
+	}
+
 	if err != nil {
 		this.mu.Lock()
 		this.stat_total.stat_error_req++
@@ -151,7 +153,7 @@ func (this *SOLClient) _docall(ts_started int64, post []byte) []byte {
 
 	req.Header.Add("Content-Type", "application/json")
 
-	// Genesys authorization support
+	/* Genesys authorization support
 	if pos := strings.Index(this.endpoint, ".genesysgo.net"); pos > -1 {
 		for pos < len(this.endpoint) && this.endpoint[pos] != '/' {
 			pos++
@@ -167,7 +169,7 @@ func (this *SOLClient) _docall(ts_started int64, post []byte) []byte {
 		if token != nil {
 			req.Header.Add("Authorization", "Bearer "+string(token))
 		}
-	}
+	}*/
 
 	resp, err := this.client.Do(req)
 	if resp != nil {

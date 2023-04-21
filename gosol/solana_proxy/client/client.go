@@ -31,6 +31,7 @@ type SOLClient struct {
 	id                       uint64
 	client                   *http.Client
 	endpoint                 string
+	header                   http.Header
 	is_public_node           bool
 	available_block_first    int
 	available_block_first_ts int64
@@ -114,7 +115,7 @@ func (this *SOLClient) GetInfo() *Solclientinfo {
 
 var new_client_id = uint64(0)
 
-func MakeClient(endpoint string, is_public_node bool, probe_time int, max_conns int, throttle []*throttle.Throttle) *SOLClient {
+func MakeClient(endpoint string, header http.Header, is_public_node bool, probe_time int, max_conns int, throttle []*throttle.Throttle) *SOLClient {
 
 	tr := &http.Transport{
 		MaxIdleConns:       max_conns,
@@ -125,6 +126,7 @@ func MakeClient(endpoint string, is_public_node bool, probe_time int, max_conns 
 	ret := SOLClient{}
 	ret.client = &http.Client{Transport: tr, Timeout: 5 * time.Second}
 	ret.endpoint = endpoint
+	ret.header = header
 	ret.is_public_node = is_public_node
 	ret._probe_time = probe_time
 	ret.stat_total.stat_request_by_fn = make(map[string]int)
