@@ -5,6 +5,7 @@ import (
 	node_status "gosol/solana_proxy/client/status"
 	"gosol/solana_proxy/client/throttle"
 	"html"
+	"strings"
 	"time"
 
 	"github.com/slawomir-pryczek/HSServer/handler_socket2/hscommon"
@@ -41,6 +42,24 @@ func (this *SOLClient) GetStatus() string {
 	if len(this.version) > 0 {
 		out.AddBadge("Version: "+this.version, node_status.Gray, "Version number was updated on: "+time.UnixMilli(this.version_ts).Format("2006-01-02 15:04:05"))
 	}
+	if this.header != nil && len(this.header) > 0 {
+		h_ := ""
+		for k, v := range this.header {
+			vv := strings.Join(v, ", ")
+
+			out := vv
+			if strings.Index(strings.ToLower(k), "authorization") != -1 && len(vv) > 5 {
+				out = ""
+				if strings.Index(strings.ToLower(vv), "bearer") == 0 {
+					out += vv[0:6] + " "
+				}
+				out += "****" + vv[len(vv)-5:]
+			}
+			h_ += k + ": " + out + "<br>"
+		}
+		out.AddBadge(fmt.Sprintf("%d Header(s) defined", len(this.header)), node_status.Gray, h_)
+	}
+
 	out.AddBadge(fmt.Sprintf("%d Requests Running", this.stat_running), node_status.Gray, "Number of requests currently being processed.")
 	if this._probe_time >= 10 {
 		out.AddBadge("Conserve Requests", node_status.Green, "Health checks are limited for\nthis node to conserve requests.\n\nIf you're paying per-request\nit's good to enable this mode.")
