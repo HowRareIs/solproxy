@@ -76,5 +76,10 @@ There is automatic throttling/routing implemented. If node is throttled the requ
 ```json
 {"error":"Throttled public node, please wait","throttle_info":{"requests":{"description":"requests made","max":99,"value":3},"requests_fn":{"description":"requests made calling single function","max":39,"value":3},"received":{"description":"bytes received","max":1000000,"value":4735645}},"throttle_timespan_seconds":12,"throttled":true,"throttled_comment":"Too much data received 4735645/1000000"}
 ```
+## Authorization
+You can add authorization or any other header using "header" parameter. Separate individual headers using newline.
+```json
+"SOL_NODES":[{"header":"Authorization:Bearer b6082xxxxx\nCache-Control:no-cache", "url":"https://rpc.hellomoon.io/", "public":false, "score_modifier":-90000}],
+```
 
 Please see [Advanced usage](doc/ADVANCED.md) for information about more complex usage scenarios.
