@@ -1,5 +1,6 @@
 # Setting up GenesysGo node
 
+GenesysGo module is obsolete. This is left here only for documentational purposes.
 Setting up GenesysGo is divided into 2 easy steps. First you need to setup authentication, then you can add your node to the pool.
 
 ## Authentication
