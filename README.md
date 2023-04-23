@@ -21,6 +21,7 @@ What's new in Solproxy 0.3?
 ```
 
 What's new in Solproxy 0.2?
+- GenesysGo support, see [adding GenesysGo node](doc/GENESYS.md)
 - Health check for pausing lagging nodes, see [setup instructions](doc/HEALTH_CHECK.md)
 - Updated dashboard UI
 - Allow to throttle using any time interval (eg. cap requests daily or per second)
